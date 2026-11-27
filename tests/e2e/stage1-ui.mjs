@@ -64,6 +64,12 @@ try {
   check(await seen(p.getByRole('img', { name: /QR code/ })), 'first log in shows the authenticator QR code')
   await shot(p, '02-authenticator-setup')
   const secret = (await p.locator('.secret').textContent()).trim()
+  // Regression: a second copy of the set-up screen (another tab, or the email link opening
+  // a new one) must not delete the set-up this screen is showing ("factor not found").
+  const p2 = await parentCtx.newPage()
+  await p2.goto(`${APP}/parent/two-step`)
+  await p2.getByRole('img', { name: /QR code/ }).waitFor()
+  await p2.close()
   await p.getByLabel(/6-digit code/).fill(totp(secret))
   await p.getByRole('button', { name: 'Continue' }).click()
   await p.getByRole('heading', { name: /^Hi Sam/ }).waitFor()

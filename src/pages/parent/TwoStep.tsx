@@ -12,6 +12,37 @@ type Mode =
   | { kind: 'enroll'; factorId: string; qr: string; secret: string }
   | { kind: 'error'; message: string }
 
+// A half-finished set-up younger than this may still be on screen somewhere
+// (another tab, or this screen mounting twice), so it is never deleted.
+const STALE_MS = 10 * 60 * 1000
+
+async function prepare(): Promise<Mode> {
+  const { data, error } = await supabase.auth.mfa.listFactors()
+  if (error) return { kind: 'error', message: errorText(error) }
+  const verified = data.totp.find((f) => f.status === 'verified')
+  if (verified) return { kind: 'verify', factorId: verified.id }
+  // Tidy up only old, abandoned set-ups.
+  for (const f of data.all) {
+    if (f.factor_type === 'totp' && f.status !== 'verified' && Date.now() - new Date(f.created_at).getTime() > STALE_MS) {
+      await supabase.auth.mfa.unenroll({ factorId: f.id })
+    }
+  }
+  const { data: en, error: enErr } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName: `Authenticator ${new Date().toISOString()}`, // unique, so set-ups never clash
+    issuer: 'Teen Investing (practice)',
+  })
+  if (enErr || !en) return { kind: 'error', message: errorText(enErr) }
+  return { kind: 'enroll', factorId: en.id, qr: en.totp.qr_code, secret: en.totp.secret }
+}
+
+// One set-up per page load: if this screen mounts twice, both get the same QR code.
+let pending: Promise<Mode> | null = null
+function setupOnce(fresh = false): Promise<Mode> {
+  if (!pending || fresh) pending = prepare()
+  return pending
+}
+
 /** Sets up the authenticator app the first time, then asks for its 6-digit code at every log in. */
 export default function ParentTwoStep() {
   const { loading, session, role, aal, refresh, signOut } = useAuth()
@@ -25,23 +56,7 @@ export default function ParentTwoStep() {
   useEffect(() => {
     if (loading || !session || role !== 'parent' || aal === 'aal2' || started.current) return
     started.current = true
-    ;(async () => {
-      const { data, error } = await supabase.auth.mfa.listFactors()
-      if (error) return setMode({ kind: 'error', message: errorText(error) })
-      const verified = data.totp.find((f) => f.status === 'verified')
-      if (verified) return setMode({ kind: 'verify', factorId: verified.id })
-      // Clear any half-finished setup from an earlier visit, then start fresh.
-      for (const f of data.all) {
-        if (f.factor_type === 'totp' && f.status !== 'verified') await supabase.auth.mfa.unenroll({ factorId: f.id })
-      }
-      const { data: en, error: enErr } = await supabase.auth.mfa.enroll({
-        factorType: 'totp',
-        friendlyName: 'Authenticator app',
-        issuer: 'Teen Investing (practice)',
-      })
-      if (enErr || !en) return setMode({ kind: 'error', message: errorText(enErr) })
-      setMode({ kind: 'enroll', factorId: en.id, qr: en.totp.qr_code, secret: en.totp.secret })
-    })()
+    setupOnce().then(setMode)
   }, [loading, session, role, aal])
 
   if (loading) return <Spinner />
@@ -57,8 +72,15 @@ export default function ParentTwoStep() {
     setBusy(false)
     if (error) {
       setCode('')
+      if (error.code === 'mfa_factor_not_found') {
+        // The set-up on screen no longer exists: start a fresh one.
+        setMode({ kind: 'loading' })
+        setMode(await setupOnce(true))
+        return setError('That set-up had expired, so here is a new QR code. In your authenticator app, delete the old “Teen Investing” entry, scan this new code, then enter its 6-digit code.')
+      }
       return setError(error.code === 'mfa_verification_failed' ? 'That code didn’t match. Codes change every 30 seconds — try the current one.' : errorText(error))
     }
+    pending = null
     await refresh()
     navigate('/parent', { replace: true })
   }
