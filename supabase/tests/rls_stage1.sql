@@ -323,6 +323,17 @@ begin
     r := r || (case when public.svc_join_blocked(array['ip:rls-test']) > now() + interval '14 minutes' then 'PASS' else 'FAIL' end
                || ' | the 10th wrong invite code blocks for 15 minutes');
 
+    -- ------------------------------------------------------------------ delete-data (Stage 6) can remove a whole family
+    begin
+      perform set_config('app.deleting_family', 'on', true);
+      delete from public.families where id = fb;
+      perform set_config('app.deleting_family', '', true);
+      select count(*) into n from public.audit_log where family_id = fb;
+      r := r || (case when n = 0 then 'PASS' else 'FAIL' end || ' | deleting a family (delete-data) also removes its audit rows (' || n || ' left)');
+    exception when others then
+      r := r || ('FAIL | deleting a family (delete-data) also removes its audit rows: ' || sqlerrm);
+    end;
+
     raise exception 'rls_tests_rollback';
   exception when others then
     if sqlerrm <> 'rls_tests_rollback' then
