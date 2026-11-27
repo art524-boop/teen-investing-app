@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Layout } from '../../components/Layout'
+import { ParentTabs } from '../../components/Tabs'
+import { useFamily } from '../../lib/familyData'
 import { Avatar, Field, PinInput, Sheet, Spinner } from '../../components/ui'
 import { InviteCard, type Invite } from './InviteCard'
 import { supabase } from '../../lib/supabase'
@@ -20,8 +22,9 @@ interface Row extends Teen {
   invite: Invite | null
 }
 
-/** Placeholder Home for Stage 1: the family's teens with Reset PIN and New invite code. */
+/** Home: each teen's credits and waiting approvals, plus Reset PIN and New invite code. */
 export default function ParentHome() {
+  const fam = useFamily()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [parentName, setParentName] = useState('')
@@ -56,7 +59,13 @@ export default function ParentHome() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Reload when the family data changes (e.g. a teen was just added and their tasks seeded).
+  useEffect(() => { load() }, [load, fam.teens.length])
+
+  const pendingFor = (teenId: string) =>
+    fam.submissions.filter((x) => x.teen_id === teenId && x.decision === 'pending').length
+    + fam.shoutouts.filter((x) => x.teen_id === teenId && x.status === 'pending').length
+    + fam.ideas.filter((x) => x.teen_id === teenId && x.status === 'pending').length
 
   const newInvite = async (row: Row) => {
     setBusyId(row.id)
@@ -73,7 +82,7 @@ export default function ParentHome() {
   }
 
   return (
-    <Layout side="parent" title="Home">
+    <Layout side="parent" title="Home" tabs={<ParentTabs />}>
       <div className="topbar">
         <span className="lbl">{familyName}</span>
         <Link className="btn ghost sm" to="/parent/account">Account</Link>
@@ -86,6 +95,12 @@ export default function ParentHome() {
 
       {!loading && !error && (
         <>
+          {fam.pendingCount > 0 && (
+            <Link className="choice" to="/parent/approvals" style={{ minHeight: 64 }}>
+              <span className="chip wait">{fam.pendingCount} waiting</span>
+              <span><b style={{ fontSize: 16 }}>Approvals</b><span className="lbl">Tasks, shout-outs and ideas to look at</span></span>
+            </Link>
+          )}
           <h2>Your teens</h2>
           {rows.length === 0 && (
             <div className="card">
@@ -106,6 +121,14 @@ export default function ParentHome() {
                     ? <span className={`chip ${locked ? 'no' : 'ok'}`}>{locked ? 'Locked' : 'Joined'}</span>
                     : <span className="chip wait">Not joined yet</span>}
                 </div>
+                {row.username && (
+                  <div className="row" style={{ marginTop: 10 }}>
+                    <span><span className="big" style={{ fontSize: 26 }}>{fam.balances[row.id] ?? 0}</span> <span className="lbl">credits</span></span>
+                    {pendingFor(row.id) > 0
+                      ? <Link className="chip wait" to="/parent/approvals">{pendingFor(row.id)} waiting for you</Link>
+                      : <span className="lbl">Nothing waiting</span>}
+                  </div>
+                )}
                 {locked && (
                   <p className="warn">Locked after 5 wrong PINs until {fmtTime(row.locked_until!)}. Resetting the PIN unlocks it now.</p>
                 )}
@@ -130,7 +153,7 @@ export default function ParentHome() {
           })}
           <Link className="btn pri wide" to="/parent/add-teen">Add a teen</Link>
           <p className="fine" style={{ marginTop: 16 }}>
-            Tasks, learning and practice investing arrive in the next stages of this test app.
+            Credits are points, not money. Learning and practice investing arrive in the next stages of this test app.
           </p>
         </>
       )}

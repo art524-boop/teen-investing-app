@@ -6,13 +6,13 @@ import { errorText } from '../lib/api'
 import { Field, Sheet } from './ui'
 
 /** Every screen: the practice banner, the content, and the feedback button. */
-export function Layout({ side, title, children }: { side: 'parent' | 'teen' | 'neutral'; title: string; children: ReactNode }) {
+export function Layout({ side, title, tabs, children }: { side: 'parent' | 'teen' | 'neutral'; title: string; tabs?: ReactNode; children: ReactNode }) {
   const mainRef = useRef<HTMLElement>(null)
   useEffect(() => {
     document.title = `${title} · Teen Investing (practice)`
   }, [title])
   return (
-    <div className={`app ${side === 'teen' ? 'teen' : ''}`}>
+    <div className={`app ${side === 'teen' ? 'teen' : ''} ${tabs ? 'has-tabs' : ''}`}>
       <div className="banner" role="note">
         <b>Practice app</b> — no real money
       </div>
@@ -20,6 +20,7 @@ export function Layout({ side, title, children }: { side: 'parent' | 'teen' | 'n
         {children}
       </main>
       <FeedbackButton screen={title} />
+      {tabs}
     </div>
   )
 }

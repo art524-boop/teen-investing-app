@@ -1,45 +1,31 @@
-import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Layout } from '../../components/Layout'
+import { TeenTabs } from '../../components/Tabs'
 import { Avatar, Spinner } from '../../components/ui'
-import { supabase } from '../../lib/supabase'
-import { errorText } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
+import { useFamily } from '../../lib/familyData'
 
-/** Stage 1 placeholder: greets the teen and shows their family name. */
+/** Garden placeholder (the real garden arrives in Stage 5): greeting, family, today's summary. */
 export default function Garden() {
   const { signOut } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [nickname, setNickname] = useState('')
-  const [avatar, setAvatar] = useState('koala')
-  const [family, setFamily] = useState('')
-
-  useEffect(() => {
-    ;(async () => {
-      const [t, f] = await Promise.all([
-        supabase.from('teens').select('nickname, avatar').maybeSingle(),
-        supabase.from('families').select('name').maybeSingle(),
-      ])
-      if (t.error || f.error) setError(errorText(t.error ?? f.error))
-      setNickname(t.data?.nickname ?? '')
-      setAvatar(t.data?.avatar ?? 'koala')
-      setFamily(f.data?.name ?? '')
-      setLoading(false)
-    })()
-  }, [])
-
-  const logOut = () => signOut('/teen/login')
+  const { loading, error, teens, familyName, tasks, balances } = useFamily()
+  const me = teens[0]
+  const due = tasks.filter((t) => t.status === 'open').length
 
   if (loading) return <Spinner />
 
   return (
-    <Layout side="teen" title="Garden">
+    <Layout side="teen" title="Garden" tabs={<TeenTabs />}>
       <div className="topbar">
-        <span className="lbl">{family}</span>
-        <Avatar avatar={avatar} size={40} />
+        <span className="lbl">{familyName}</span>
+        {me && <Avatar avatar={me.avatar} size={40} />}
       </div>
-      <h1>Hi {nickname}</h1>
+      <h1>Hi {me?.nickname}</h1>
       {error && <p className="err" role="alert">{error}</p>}
+      <div className="wrap" aria-label="Today" style={{ marginTop: 0, marginBottom: 10 }}>
+        <Link className="chip" to="/teen/tasks">{due} task{due === 1 ? '' : 's'} to do</Link>
+        <Link className="chip" to="/teen/credits">{me ? balances[me.id] ?? 0 : 0} credits</Link>
+      </div>
       <div className="garden" aria-hidden="true">
         <svg viewBox="0 0 400 300">
           <rect width="400" height="300" fill="#bfe7f7" />
@@ -56,9 +42,9 @@ export default function Garden() {
       </div>
       <div className="card">
         <b>Welcome to your garden</b>
-        <p className="fine">Your garden starts growing when your family's practice investing begins. Tasks and learning arrive soon.</p>
+        <p className="fine">Your garden starts growing when your family's practice investing begins. For now, earn credits by doing tasks.</p>
       </div>
-      <button type="button" className="btn wide" onClick={logOut}>Log out</button>
+      <button type="button" className="btn wide" onClick={() => signOut('/teen/login')}>Log out</button>
     </Layout>
   )
 }
