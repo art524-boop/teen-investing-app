@@ -43,7 +43,9 @@ export function serve(handler: (req: Request, body: Record<string, unknown>) => 
       return await handler(req, body)
     } catch (e) {
       if (e instanceof HttpError) return json(e.status, { error: e.code, message: e.message, ...e.extra })
-      console.error('Unexpected error:', e instanceof Error ? e.message : 'unknown')
+      // Log only the error's message and code (database / auth errors are plain objects).
+      const err = (e ?? {}) as { message?: unknown; code?: unknown }
+      console.error('Unexpected error:', String(err.message ?? 'unknown'), String(err.code ?? ''))
       return json(500, { error: 'server_error', message: 'Something went wrong on our side. Please try again.' })
     }
   })
