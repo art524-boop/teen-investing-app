@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Layout } from '../../components/Layout'
 import { Field } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
@@ -7,8 +7,7 @@ import { useAuth } from '../../lib/auth'
 import { errorText } from '../../lib/api'
 
 export default function Account() {
-  const { session } = useAuth()
-  const navigate = useNavigate()
+  const { session, signOut } = useAuth()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
   const [busy, setBusy] = useState(false)
@@ -27,10 +26,7 @@ export default function Account() {
     setMsg({ ok: true, text: 'Your password has been changed.' })
   }
 
-  const logOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/', { replace: true })
-  }
+  const logOut = () => signOut('/')
 
   return (
     <Layout side="parent" title="Account">

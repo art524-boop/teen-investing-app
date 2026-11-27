@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/auth'
 import { errorText } from '../../lib/api'
 
 export default function ParentLogin() {
-  const { loading, session, role, aal } = useAuth()
+  const { loading, session, role, aal, refresh } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -32,8 +32,10 @@ export default function ParentLogin() {
     }
     if ((data.user?.app_metadata as Record<string, unknown>)?.role !== 'parent') {
       await supabase.auth.signOut()
+      await refresh()
       return setError('This login is for parents. Teens log in with their username and PIN.')
     }
+    await refresh()
     navigate('/parent/two-step', { replace: true })
   }
 

@@ -14,6 +14,8 @@ export interface AuthState {
   /** Parent only: true if an authenticator app is already set up. */
   hasFactor: boolean
   refresh: () => Promise<void>
+  /** Signs out, then reloads the app at `to` so no family data stays in memory. */
+  signOut: (to: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -33,7 +35,7 @@ async function describe(session: Session | null) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<Omit<AuthState, 'refresh'>>({
+  const [state, setState] = useState<Omit<AuthState, 'refresh' | 'signOut'>>({
     loading: true, session: null, role: null, familyId: null, aal: null, hasFactor: false,
   })
 
@@ -59,7 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await load(data.session)
   }
 
-  return <AuthContext.Provider value={{ ...state, refresh }}>{children}</AuthContext.Provider>
+  const signOut = async (to: string) => {
+    await supabase.auth.signOut()
+    window.location.replace(to)
+  }
+
+  return <AuthContext.Provider value={{ ...state, refresh, signOut }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthState {

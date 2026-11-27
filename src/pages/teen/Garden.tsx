@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Layout } from '../../components/Layout'
 import { Avatar, Spinner } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { errorText } from '../../lib/api'
+import { useAuth } from '../../lib/auth'
 
 /** Stage 1 placeholder: greets the teen and shows their family name. */
 export default function Garden() {
-  const navigate = useNavigate()
+  const { signOut } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [nickname, setNickname] = useState('')
@@ -28,10 +28,7 @@ export default function Garden() {
     })()
   }, [])
 
-  const logOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/teen/login', { replace: true })
-  }
+  const logOut = () => signOut('/teen/login')
 
   if (loading) return <Spinner />
 
@@ -58,7 +55,7 @@ export default function Garden() {
         </svg>
       </div>
       <div className="card">
-        <b>Welcome to the {family || 'family'} garden</b>
+        <b>Welcome to your garden</b>
         <p className="fine">Your garden starts growing when your family's practice investing begins. Tasks and learning arrive soon.</p>
       </div>
       <button type="button" className="btn wide" onClick={logOut}>Log out</button>

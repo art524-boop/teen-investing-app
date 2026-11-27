@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:api": "node --env-file=.env tests/e2e/stage1-api.mjs",
+    "test:ui": "node tests/e2e/stage1-ui.mjs"
   },
   "dependencies": {
     "@fontsource/lexend": "^5.3.0",

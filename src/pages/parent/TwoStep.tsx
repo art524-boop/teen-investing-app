@@ -14,7 +14,7 @@ type Mode =
 
 /** Sets up the authenticator app the first time, then asks for its 6-digit code at every log in. */
 export default function ParentTwoStep() {
-  const { loading, session, role, aal, refresh } = useAuth()
+  const { loading, session, role, aal, refresh, signOut } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>({ kind: 'loading' })
   const [code, setCode] = useState('')
@@ -63,10 +63,7 @@ export default function ParentTwoStep() {
     navigate('/parent', { replace: true })
   }
 
-  const logOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/', { replace: true })
-  }
+  const logOut = () => signOut('/')
 
   const codeField = (
     <form onSubmit={submit} noValidate>
