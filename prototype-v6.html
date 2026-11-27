@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teen Investing Prototype v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE everyday: bright and kind on the teen side, calm and quick on the parent side
+   IDEA two real phones on the family bench, wired to one shared simulation
+   PICTURE the teen's garden: one plant per kind of ETF held, growing with each deposit and month held
+   COLOUR eucalyptus stage, white app surfaces, leaf green, sunflower accent, sky blue
+   TYPE Lexend 600 + Lexend 400 (built for easy reading)
+   LAYOUT laptop: title and simulation controls on top, two phones side by side; phone: toggle, one phone */
+:root{color-scheme:light dark;--bg:light-dark(#eef4ef,#0c1a15);--ink:light-dark(#13201b,#e6efe9);--muted:light-dark(#4a5a53,#a9bbb2);--stage:light-dark(#1d4a3b,#0f2a21);--sun:#ffc83d}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Lexend,system-ui,sans-serif;overflow-x:clip}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid #3b8fd9;outline-offset:2px}
+.top{background:var(--stage);color:#f2f7f3;padding:22px max(4vw,16px) 6px}
+.top-in{max-width:1240px;margin:0 auto;display:flex;flex-wrap:wrap;gap:14px 32px;align-items:flex-end;justify-content:space-between}
+h1{font-size:clamp(26px,4vw,40px);line-height:1.05;letter-spacing:-.02em;margin:0;font-weight:600;text-wrap:balance}
+.sub{margin:8px 0 0;color:#cfe3d8;max-width:56ch;font-size:15px}
+.sim{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.month{font-weight:600;font-size:15px;background:#00000030;border-radius:999px;padding:10px 16px;white-space:nowrap}
+.sbtn{min-height:44px;border-radius:999px;border:1px solid #ffffff60;background:transparent;color:#fff;font-size:15px;padding:0 16px}
+.sbtn:hover{background:#ffffff18}
+.sbtn:disabled{opacity:.45;cursor:not-allowed}
+.sbtn.pri{background:var(--sun);color:#1a1a12;border-color:var(--sun);font-weight:600}
+.sim2{max-width:1240px;margin:12px auto 0;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+.ctl{display:flex;align-items:center;gap:8px;font-size:14px;color:#e6f1ea}
+.ctl select{width:auto;min-height:44px;border-radius:999px;border:1px solid #ffffff60;background:#00000030;color:#fff;font:inherit;font-size:15px;padding:0 12px}
+.ctl option{color:#13201b}
+.msg{max-width:1240px;margin:10px auto 0;font-size:14px;color:#e6f1ea;min-height:21px}
+.toggle{display:none;max-width:1240px;margin:12px auto 0;background:#00000030;border-radius:999px;padding:4px;gap:4px}
+.toggle button{flex:1;min-height:44px;border:0;border-radius:999px;background:transparent;color:#fff;font-size:15px}
+.toggle button[aria-pressed=true]{background:#fff;color:#1d4a3b;font-weight:600}
+.stage{background:var(--stage);padding:16px max(4vw,16px) 40px}
+.phones{max-width:1240px;margin:0 auto;display:flex;gap:48px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:10px;width:370px;max-width:100%}
+.col h2{color:#fff;font-size:17px;margin:0;font-weight:500}
+.col h2 span{color:#cfe3d8;font-weight:400}
+@media(max-width:899px){.toggle{display:flex}.col.hide-m{display:none}}
+.phone{width:100%;height:min(780px,calc(100svh - 40px));min-height:560px;background:#fff;color:#13201b;border-radius:42px;border:10px solid #0b0f0d;box-shadow:0 18px 40px #00000050;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.phone.teen{background:#fffdf5}
+.status{display:flex;justify-content:space-between;padding:10px 24px 4px;font-size:13px;font-weight:600}
+.scr{flex:1;overflow-y:auto;padding:2px 16px 16px;overscroll-behavior:contain}
+.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid #e3e9e5;background:inherit}
+.tabs.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tabs button{min-height:58px;background:none;border:0;font-size:13px;color:#5b6b64;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;padding:0 2px}
+.tabs button[aria-selected=true]{color:#1f6b4f;font-weight:600}
+.tabs button[aria-selected=true]::after{content:"";position:absolute;bottom:4px;width:18px;height:3px;border-radius:2px;background:currentColor}
+.teen .tabs button[aria-selected=true]{color:#2b8a46}
+.tabs svg{width:22px;height:22px}
+.dot{position:absolute;top:5px;left:calc(50% + 6px);background:#d93f3a;color:#fff;font-size:11px;font-weight:600;border-radius:999px;min-width:18px;height:18px;line-height:18px;padding:0 5px}
+@media(max-width:480px){.phone{border:0;border-radius:18px;height:calc(100svh - 150px)}}
+.scr h3{font-size:24px;line-height:1.1;margin:8px 0 12px;font-weight:600;letter-spacing:-.01em}
+.scr h4{font-size:18px;line-height:1.3;margin:8px 0 4px;font-weight:600}
+.card{border:1px solid #e3e9e5;border-radius:16px;padding:14px;margin-bottom:12px;background:#fff}
+.teen .card{border-color:#efe4c4}
+.calm{background:#e7f5fb;border-color:#c4e4f1}
+.lock{background:#f6f8f7}
+.teen .lock{background:#f7f5ee}
+.lbl{font-size:13px;color:#5b6b64}
+.big{font-size:30px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap}
+.up{color:#1f7a45}
+.down{color:#b4382f}
+.chg{font-size:15px;font-weight:500;white-space:nowrap}
+.bar{position:relative;height:12px;background:#e6efe9;border-radius:999px;overflow:hidden;margin:8px 0 2px}
+.bar.thin{height:8px}
+.bar i{display:block;height:100%;background:#1f6b4f;border-radius:999px;transition:width .6s}
+.teen .bar i{background:linear-gradient(90deg,#3fae5a,#ffc83d)}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.row.al{align-items:flex-start}
+.wrap{flex-wrap:wrap;justify-content:flex-start}
+.btn{min-height:44px;border-radius:12px;border:1px solid #cfdad4;background:#fff;color:#13201b;font-size:15px;padding:0 14px}
+.btn:hover{background:#f3f7f4}
+.btn.pri{background:#1f6b4f;color:#fff;border-color:#1f6b4f;font-weight:600}
+.teen .btn.pri{background:#2f9a4f;border-color:#2f9a4f}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sq{width:44px;padding:0;font-size:20px;flex:none}
+.btn.sm{font-size:14px;padding:0 12px}
+.btn.dash{border-style:dashed}
+.btn.ghost{border-color:transparent;background:transparent;padding:0 6px;color:#1f6b4f}
+.wide{width:100%;margin-top:10px}
+.chip{display:inline-block;font-size:13px;padding:3px 9px;border-radius:999px;background:#eef3f0;color:#3c4c45;font-weight:500}
+.chip.wait{background:#fff1c7;color:#6e5100}
+.chip.ok{background:#dcf3e4;color:#1d6a3e}
+.chip.no{background:#fde4e1;color:#962e26}
+input[type=text],input[type=number],input[type=search],select{font:inherit;font-size:16px;min-height:44px;border:1px solid #cfdad4;border-radius:10px;padding:0 10px;background:#fff;color:#13201b;width:100%}
+input[type=range]{width:100%;accent-color:#1f6b4f;min-height:44px}
+.fine{font-size:13px;color:#5b6b64;margin:8px 0 0}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:8px}
+.trow{padding:8px 0;border-top:1px solid #eef2ef;font-size:14px}
+.sec{display:block;margin:18px 0 8px;font-size:17px;font-weight:600}
+.act{font-size:14px;padding:7px 0;border-top:1px solid #eef2ef}
+.act b{font-weight:500;white-space:nowrap}
+.sw{position:relative;display:inline-block;width:52px;height:32px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;background:#cfdad4;border-radius:99px;transition:background .2s}
+.sw span::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .2s}
+.sw input:checked+span{background:#1f6b4f}
+.top .sw input:checked+span{background:var(--sun)}
+.sw input:checked+span::after{transform:translateX(20px)}
+.sw input:focus-visible+span{outline:3px solid #3b8fd9;outline-offset:2px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-top:12px}
+.chk input{width:22px;height:22px;margin:1px 0 0;flex:none}
+.alloc{margin:14px 0;padding-top:12px;border-top:1px solid #eef2ef}
+.abar{flex:1;height:10px;background:#eef2ef;border-radius:99px;overflow:hidden}
+.abar i{display:block;height:100%}
+.pc{width:42px;text-align:right;font-variant-numeric:tabular-nums}
+.amt{font-variant-numeric:tabular-nums;white-space:nowrap}
+.etf{padding:10px 0;border-top:1px solid #eef2ef}
+.etf b{font-weight:600;font-size:15px}
+.meter{display:inline-flex;gap:2px;vertical-align:-1px;margin-left:4px}
+.meter i{width:7px;height:7px;border-radius:50%;background:#d5ddd9}
+.meter i.on{background:#3c4c45}
+table.h{width:100%;border-collapse:collapse;font-size:14px}
+.h th{font-weight:500;color:#5b6b64;text-align:right;padding:6px 0;font-size:13px}
+.h td{text-align:right;padding:7px 0;border-top:1px solid #eef2ef;font-variant-numeric:tabular-nums;white-space:nowrap}
+.h th:first-child,.h td:first-child{text-align:left;white-space:normal;padding-right:6px}
+.fig{position:relative;height:150px;margin-top:8px}
+.fig.tall{height:220px}
+.fig svg{position:absolute;inset:0;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:#5b6b64;margin-top:6px}
+.k{display:inline-block;width:16px;height:3px;background:var(--c);vertical-align:middle;margin-right:6px}
+.k.dash{background:repeating-linear-gradient(90deg,#8a9a93 0 4px,transparent 4px 7px)}
+.garden{border-radius:20px;overflow:hidden;aspect-ratio:4/3;margin:2px 0 12px;background:#bfe7f7}
+.garden svg{display:block;width:100%;height:100%}
+.grew{transform-box:fill-box;transform-origin:50% 100%;animation:grew .9s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes grew{from{transform:scale(.8)}}
+.rain{animation:rain 1.1s linear infinite}
+@keyframes rain{to{transform:translateY(14px)}}
+@media(prefers-reduced-motion:reduce){.grew,.rain{animation:none}.bar i{transition:none}}
+.wx{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid #f1ead4}
+.wx svg,.wxi svg{width:34px;height:34px;flex:none;display:block}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:#eef3f0;border-radius:12px;padding:4px;margin:4px 0 10px}
+.seg.two-up{grid-template-columns:repeat(2,minmax(0,1fr))}
+.seg button{min-height:44px;border:0;border-radius:9px;background:transparent;font-size:14px;color:#3c4c45;line-height:1.2;padding:4px}
+.seg button[aria-pressed=true]{background:#fff;color:#13201b;font-weight:600;box-shadow:0 1px 3px #0002}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;margin-top:8px}
+.chips button{flex:none;min-height:40px;border:1px solid #cfdad4;background:#fff;border-radius:999px;padding:0 12px;font-size:14px;color:#3c4c45}
+.chips button[aria-pressed=true]{background:#1f6b4f;border-color:#1f6b4f;color:#fff}
+.etfrow{display:grid;grid-template-columns:minmax(0,1fr) 60px auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid #eef2ef;padding:10px 0;min-height:56px;color:inherit}
+.etfrow:hover{background:#f7faf8}
+.etfrow b{display:block;font-size:15px}
+.etfrow .lbl{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etfrow .px{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px}
+.mix{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:10px 0 6px;gap:2px}
+.mix i{display:block;height:100%}
+.cd{font-variant-numeric:tabular-nums}
+.spark{width:60px;height:24px;display:block}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+.kv div{background:#f6f8f7;border-radius:10px;padding:8px}
+.kv b{display:block;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kv span{font-size:13px;color:#5b6b64}
+.swc{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px;flex:none}
+.leg{padding:8px 0;font-size:15px;border-top:1px solid #f1ead4}
+.badges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 8px}
+.badges.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.bdg{text-align:center;font-size:13px;line-height:1.3}
+.bdg svg{width:52px;height:52px;display:block;margin:0 auto 4px}
+.bdg.off{color:#6f7d76}
+.opt{display:flex;gap:10px;align-items:center;width:100%;text-align:left;margin-top:8px;padding:10px 12px;min-height:48px;line-height:1.35}
+.opt::before{content:"";flex:none;width:18px;height:18px;border-radius:50%;border:2px solid #8a9a93;background:#fff}
+.opt[aria-pressed=true]{border-color:#2f9a4f;background:#eef9f0;font-weight:500}
+.opt[aria-pressed=true]::before{border-color:#2f9a4f;background:radial-gradient(#2f9a4f 0 45%,#fff 50%)}
+.quote{font-size:14px;margin:8px 0 0;padding:8px 10px;border-radius:10px;background:#f3f6f4}
+.warn{font-size:13px;margin:8px 0 0;padding:8px 10px;border-radius:10px;background:#fff1c7;color:#4d3a00}
+.pts{margin:8px 0 0;padding-left:20px;font-size:15px}
+.pts li{margin:6px 0}
+.mod{padding:10px 0;border-top:1px solid #f1ead4}
+.mod b{display:block;font-size:15px;font-weight:600}
+.rev{list-style:none;margin:8px 0 0;padding:0}
+.rev li{padding:8px 0;border-top:1px solid #f1ead4;font-size:14px}
+.rev .mark{font-weight:600;margin-right:4px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.stats div{background:#fff;border:1px solid #efe4c4;border-radius:12px;padding:8px 10px}
+.stats b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:#5b6b64}
+.sheet{position:absolute;inset:0;background:#0b0f0d70;display:flex;align-items:flex-end;z-index:5}
+.sheet>div{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:20px 16px 24px}
+.sheet h4{margin:0 0 6px;font-size:20px;line-height:1.2}
+ul.fine{padding-left:18px}
+ul.fine li{margin:4px 0}
+.link{color:#1f6b4f;text-decoration:underline;text-underline-offset:2px}
+.rv{display:inline-block;margin-left:6px;font-size:13px;font-weight:600;background:#fff0b3;color:#4d3a00;border:1px dashed #a07800;border-radius:6px;padding:0 6px;white-space:nowrap;vertical-align:1px}
+.today{display:flex;gap:6px;overflow-x:auto;margin:4px 0 10px;padding-bottom:2px}
+.today span{flex:none;font-size:13px;background:#fff;border:1px solid #efe4c4;border-radius:999px;padding:6px 10px;white-space:nowrap}
+.steps{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:3px}
+.steps li{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:#6f7d76}
+.steps li.on{color:#13201b}
+.steps li.on span:first-child::before{content:"✓ ";color:#1f6b4f;font-weight:600}
+.steps li.x span:first-child::before{content:"✕ ";color:#b4382f;font-weight:600}
+.steps .note{display:block;font-size:13px;color:#5b6b64;padding-left:16px}
+.thumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.thumbs button{padding:0;border:3px solid transparent;border-radius:12px;background:none;min-height:44px;aspect-ratio:1}
+.thumbs button[aria-pressed=true]{border-color:#2f9a4f}
+.thumbs svg,.thumb svg{width:100%;height:100%;display:block;border-radius:8px}
+.thumb{width:72px;height:72px;margin-top:8px}
+.guide{padding:clamp(28px,4vw,56px) max(4vw,16px)}
+.guide-in{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px 56px}
+.guide h2{font-size:28px;line-height:1.1;margin:0 0 12px;letter-spacing:-.01em}
+.guide ol{margin:0;padding-left:22px}
+.guide li{margin:0 0 10px;max-width:64ch}
+.guide p{margin:0 0 12px;color:var(--muted);max-width:62ch}
+@media(max-width:760px){.guide-in{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div>
+      <h1>Teen investing app: Prototype v6</h1>
+      <p class="sub">One simulation drives both phones. Act as the parent, act as the teen, then move time forward. Sample family: Sam (parent) and Mia, 14.</p>
+    </div>
+    <div class="sim" aria-label="Simulation controls">
+      <span class="month" id="month">Month 7</span><span class="month" id="mkt" aria-live="off"></span>
+      <button class="sbtn pri" data-act="next" id="bNext">Next month</button>
+      <button class="sbtn" data-act="dip" id="bDip">Market dip</button>
+      <button class="sbtn" data-act="reset" id="bReset">Reset</button>
+    </div>
+  </div>
+  <div class="sim2">
+    <label class="ctl" for="rmin">Partner minimum order
+      <select id="rmin" data-set="rmin"><option value="5">$5</option><option value="20">$20</option><option value="50">$50</option><option value="500">$500</option></select>
+    </label>
+    <label class="ctl" for="rtime">Jump to
+      <select id="rtime" data-set="rtime"><option value="open">Weekday, market open</option><option value="eve">Weekday evening, closed</option><option value="wknd">Weekend, closed</option></select>
+    </label>
+    <label class="ctl" for="review"><span class="sw"><input type="checkbox" id="review" data-set="review"><span></span></span>Show review notes</label>
+  </div>
+  <p class="msg" id="msg" aria-live="polite">Funds, fees and returns are made up. Not predictions or advice.</p>
+  <div class="toggle" role="group" aria-label="Which phone to show">
+    <button data-act="view" data-v="parent" id="vP">Parent app</button>
+    <button data-act="view" data-v="teen" id="vT">Teen app</button>
+  </div>
+</header>
+
+<main class="stage">
+  <div class="phones">
+    <section class="col" id="colP" aria-label="Parent app">
+      <h2>Parent app <span>· Sam</span></h2>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>Parent</span></div>
+        <div class="scr" id="pScr" role="tabpanel" tabindex="0"></div>
+        <nav class="tabs" id="pTabs" role="tablist" aria-label="Parent sections"></nav>
+        <div id="pSheet"></div>
+      </div>
+    </section>
+    <section class="col" id="colT" aria-label="Teen app">
+      <h2>Teen app <span>· Mia</span></h2>
+      <div class="phone teen">
+        <div class="status"><span>9:41</span><span>Mia</span></div>
+        <div class="scr" id="tScr" role="tabpanel" tabindex="0"></div>
+        <nav class="tabs four" id="tTabs" role="tablist" aria-label="Teen sections"></nav>
+      </div>
+    </section>
+  </div>
+</main>
+
+<section class="guide">
+  <div class="guide-in">
+    <div>
+      <h2>Try the whole loop</h2>
+      <ol>
+        <li><b>Home</b> is Mia's portfolio: total value, the chart, holdings (tap one for its details), her milestone and learning. <b>Invest</b> is where Sam acts: market status, wallet, three ways to invest, and the list of ASX-listed ETFs.</li>
+        <li><b>Invest now:</b> open Invest, tap an ETF, enter an amount and press <b>Buy now</b>. The market is open, so it is bought straight away.</li>
+        <li>Set <b>Jump to</b> at the top to <b>Weekend, closed</b>. Buy again: the order waits with a live countdown to Monday 10:00 am. Cancel it, or press <b>Skip to market open</b> to see it filled.</li>
+        <li><b>Steady plan:</b> choose how much PayTo collects, how often, and the amount (at least $100) at which it auto-invests into your chosen ETFs.</li>
+        <li><b>Milestones:</b> in Approvals, approve Mia's car wash and shout-out. She passes 200 credits. Open Invest → Milestones, add money (the wallet only has $90 free) and approve. You can also change the milestone amount for each level (at least $100).</li>
+        <li>Press <b>Next month</b> to move time on. Prices move, the steady plan collects money, and Mia's garden grows.</li>
+        <li>Turn on <b>Show review notes</b> to tag everything a lawyer should check.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>What one month does</h2>
+      <p>The clock jumps to a weekday morning with the market open, so waiting orders are filled. Made-up prices move, the steady plan collects money into the wallet (and auto-invests once your amount is reached), repeating tasks reopen, and the monthly cap and shout-out limit reset.</p><p>Market hours in the demo: about 10 am to 4 pm Sydney time on weekdays. Public holidays are ignored. In the live app the partner says when the market is open.</p>
+      <p>The ETF list is a made-up catalogue of 31 example funds in 10 categories. In the live app it would be the partner's full list of ASX (Australian Securities Exchange) ETFs (exchange-traded funds).</p>
+      <p>Credits are points. No real money, broker, login or fund is connected. Funds, fees and returns are made up. Not predictions or advice.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+{
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>(n<0?'−':'')+'$'+Math.abs(n).toFixed(2);
+const sgn=n=>(n>=0?'▲ +':'▼ −')+'$'+Math.abs(n).toFixed(2);
+const whole=n=>'$'+Math.round(n);
+const cr=n=>Math.round(n*100)/100;
+const cap1=s=>s[0].toUpperCase()+s.slice(1);
+const hash=s=>{let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0};
+const mul=a=>()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const gauss=r=>Math.sqrt(-2*Math.log(r()||1e-9))*Math.cos(2*Math.PI*r());
+const shuffle=(a,r)=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+
+/* ---------- ETF catalogue (fictional) ----------
+   31 made-up ETFs in 10 categories, standing in for the partner's full list of ASX ETFs.
+   Codes use the made-up "EX" format so none can be mistaken for a real ASX code. */
+const FCAT={
+ au:{t:'Australian shares',plant:'Wattle',shape:'bush',pal:['#ffc83d','#eaa400'],col:'#e9a900',mu:.006,sd:.04,dip:-.09,purpose:'Long-term growth from Australian businesses, often with dividends.',moves:'Rises and falls with the Australian share market. It can drop 20% or more in a bad year.'},
+ sm:{t:'Small and mid companies',plant:'Kangaroo paw',shape:'bush',pal:['#e0453a','#b8322a'],col:'#d9534f',mu:.007,sd:.055,dip:-.12,purpose:'Growth from smaller companies that may grow faster than large ones.',moves:'Usually moves more than large companies, up and down.'},
+ gl:{t:'Global shares',plant:'Gum tree',shape:'tree',pal:['#2c784b','#379759','#4bb067'],col:'#2f8f5b',mu:.007,sd:.042,dip:-.1,purpose:'Growth spread across many countries, not just Australia.',moves:'Moves with world markets and with the Australian dollar.'},
+ em:{t:'Emerging markets',plant:'Banksia',shape:'tree',pal:['#9a5a1e','#c46a2b','#e08a3c'],col:'#c46a2b',mu:.007,sd:.055,dip:-.12,purpose:'Growth from economies that are still developing quickly.',moves:'Can swing a lot with politics, currencies and commodity prices.'},
+ se:{t:'Sectors and themes',plant:'Tree fern',shape:'tree',pal:['#2f6f66','#3f9a7a','#62b896'],col:'#3f9a7a',mu:.008,sd:.06,dip:-.13,purpose:'A focused bet on one industry, such as technology or healthcare.',moves:'Less spread out, so it can rise or fall much more than the broad market.'},
+ pr:{t:'Property',plant:'Bottlebrush',shape:'bush',pal:['#c2334d','#9e2238'],col:'#c2334d',mu:.005,sd:.045,dip:-.1,purpose:'Income and growth from owners of shopping centres, offices and warehouses.',moves:'Sensitive to interest rates and the property cycle.'},
+ bo:{t:'Bonds',plant:'Saltbush',shape:'shrub',pal:['#759d91','#8bb4a6','#a5c8bb'],col:'#6c9bb8',mu:.003,sd:.012,dip:-.015,purpose:'Steadier value and regular interest.',moves:'Usually moves less than shares. It can fall when interest rates rise.'},
+ ca:{t:'Cash and short-term',plant:'Tussock grass',shape:'shrub',pal:['#9fb27a','#b6c78f','#cdd9a8'],col:'#9fb27a',mu:.0035,sd:.0012,dip:0,purpose:'Keeping value steady while earning some interest.',moves:'Barely moves. Growth is low and may not keep up with rising prices.'},
+ di:{t:'Diversified mixes',plant:'Paperbark',shape:'tree',pal:['#6b7d55','#84976a','#a1b388'],col:'#84976a',mu:.005,sd:.025,dip:-.06,purpose:'A ready-made mix of shares, bonds and cash in one fund.',moves:'Moves less than an all-shares fund, more than an all-bonds fund.'},
+ et:{t:'Ethically screened',plant:'Lilly pilly',shape:'bush',pal:['#8e4a8a','#6e2f6a'],col:'#8e4a8a',mu:.007,sd:.045,dip:-.1,purpose:'Shares chosen using a published set of ethical rules about what is left out.',moves:'Moves with share markets. Leaving some industries out can make it behave differently.'}
+};
+const FUNDS=[
+ ['EX01','Example Australian 200 Fund','au',.07,'The 200 largest companies on the ASX.'],
+ ['EX02','Example Australian 50 Leaders Fund','au',.10,'The 50 largest Australian companies.'],
+ ['EX03','Example Australian Dividend Fund','au',.30,'Australian companies chosen for paying regular dividends.'],
+ ['EX04','Example Broad Australian Market Fund','au',.05,'About 300 large and medium Australian companies.'],
+ ['EX05','Example Australian Small Companies Fund','sm',.35,'About 200 smaller Australian companies.'],
+ ['EX06','Example Australian Mid-Cap Fund','sm',.30,'Medium-sized Australian companies outside the top 50.'],
+ ['EX07','Example World Shares Fund','gl',.12,'About 1,500 large companies in developed countries.'],
+ ['EX08','Example US 500 Fund','gl',.04,'The 500 largest companies in the United States.'],
+ ['EX09','Example Global Shares (Currency Hedged) Fund','gl',.20,'Large global companies, with most currency moves removed.'],
+ ['EX10','Example All-World Fund','gl',.18,'Companies in both developed and emerging countries.'],
+ ['EX11','Example Europe Shares Fund','gl',.30,'Large companies across Europe.'],
+ ['EX12','Example Asia Leaders Fund','gl',.40,'Large companies in Asian markets.'],
+ ['EX13','Example Emerging Markets Fund','em',.35,'Companies in fast-growing economies such as India, Brazil and parts of Asia.'],
+ ['EX14','Example Emerging Markets Leaders Fund','em',.45,'The largest companies in emerging markets.'],
+ ['EX15','Example Global Technology Fund','se',.48,'Large technology companies around the world.'],
+ ['EX16','Example Global Healthcare Fund','se',.45,'Healthcare and medical companies around the world.'],
+ ['EX17','Example Global Infrastructure Fund','se',.50,'Owners of toll roads, airports, pipelines and power networks.'],
+ ['EX18','Example Australian Resources Fund','se',.34,'Australian mining and energy companies.'],
+ ['EX19','Example Australian Property Fund','pr',.23,'Australian listed property trusts: shopping centres, offices and warehouses.'],
+ ['EX20','Example Global Property Fund','pr',.40,'Listed property companies around the world.'],
+ ['EX21','Example Australian Bond Fund','bo',.15,'Loans to Australian governments and companies.'],
+ ['EX22','Example Government Bond Fund','bo',.12,'Loans to Australian federal and state governments.'],
+ ['EX23','Example Global Bond (Hedged) Fund','bo',.20,'Loans to governments and companies worldwide, with most currency moves removed.'],
+ ['EX24','Example Corporate Bond Fund','bo',.25,'Loans to large companies that pay interest.'],
+ ['EX25','Example Cash Fund','ca',.18,'Bank deposits that earn interest.'],
+ ['EX26','Example Short-Term Bond Fund','ca',.15,'Loans that are repaid within a few years.'],
+ ['EX27','Example Balanced Mix Fund','di',.27,'A ready-made mix of about 50% shares and 50% bonds and cash.'],
+ ['EX28','Example Growth Mix Fund','di',.27,'A ready-made mix of about 70% shares and 30% bonds and cash.'],
+ ['EX29','Example High Growth Mix Fund','di',.27,'A ready-made mix of about 90% shares and 10% bonds.'],
+ ['EX30','Example Ethically Screened Global Fund','et',.40,'Global companies that pass a published set of ethical screens.'],
+ ['EX31','Example Ethically Screened Australian Fund','et',.35,'Australian companies that pass a published set of ethical screens.']
+].map(([id,name,cat,fee,holds])=>{const c=FCAT[cat],r=mul(hash(id));return {id,name,short:name.replace('Example ','').replace(' Fund',''),cat,fee,holds,mu:c.mu*(.9+r()*.2),sd:c.sd*(.9+r()*.2),dip:c.dip,p0:Math.round(15+r()*60)}});
+const FUND=Object.fromEntries(FUNDS.map(f=>[f.id,f]));
+const RISK=['Lowest','Lower','Medium','Higher','Highest'];
+const riskN=f=>f.sd<=.005?0:f.sd<=.015?1:f.sd<=.03?2:f.sd<=.046?3:4;
+const meter=f=>{const n=riskN(f);return `Risk: ${RISK[n]}<span class="meter" aria-hidden="true">${[0,1,2,3,4].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</span>`};
+
+/* ---------- PRICE SOURCE ----------
+   Every fund return comes through priceSource.monthlyReturn(fundId, month).
+   This build ships one source: made-up returns from a seeded generator, so every demo plays out the same way.
+   Funds in the same category share a market factor, so they tend to move together.
+   Where a real end-of-day data provider would plug in:
+   1. A server job runs once a day, fetches closing prices from a licensed end-of-day data provider, and stores
+      them in the app's own database.
+   2. The app asks its own server for prices already stored there. It never calls the data provider directly.
+   3. Replace madeUpSource with an object that has the same monthlyReturn method and reads those stored prices.
+   No live API calls from the browser, and no API keys in front-end code. */
+const madeUpSource={label:'Made-up seeded returns',monthlyReturn(id,month){
+ const f=FUND[id],a=gauss(mul(hash('cat|'+f.cat+'|'+month))),b=gauss(mul(hash('fund|'+id+'|'+month)));
+ return f.mu+f.sd*(.8*a+.6*b);}};
+const priceSource=madeUpSource;
+
+/* ---------- learning modules ---------- */
+const LC=[
+ {id:'c1',t:'Money basics',level:1,feat:'a bird bath',mods:['m1','m2']},
+ {id:'c2',t:'Earning and banking',level:2,feat:'a garden bench',mods:['m3','m4']},
+ {id:'c3',t:'Investing basics',level:3,feat:'bees',mods:['m5','m6']},
+ {id:'c4',t:'Risk and diversification',level:4,feat:'a pond',mods:['m7','m8']},
+ {id:'c5',t:'Markets and behaviour',level:5,feat:'a birdhouse',mods:['m9','m10']},
+ {id:'c6',t:'Costs and the long term',level:6,feat:'a flower bed',mods:['m11','m12']}
+];
+/* each question: [question, correct answer, wrong answer, wrong answer] — options are shuffled on every attempt */
+const MODS={
+ m1:{t:'Needs, wants and budgets',mins:8,pts:["A need is something you must have to get by, like food, a home and getting to school.","A want is nice to have, like new headphones.","A budget is a plan for your money: what comes in, what goes out, and what you save.","Tracking a week of spending shows where your money really goes."],qs:[
+  ["Which of these is a need?","Lunch for school","A new phone case","A concert ticket"],
+  ["A budget is…","A plan for what comes in, goes out and is saved","A list of things you want to buy","A type of bank account"],
+  ["Mia saves $20 a month for $120 headphones. How long will it take?","6 months","3 months","12 months"],
+  ["Why track your spending for a week?","To see where your money really goes","So you can spend more","Because banks require it"],
+  ["'Pay yourself first' means…","Put some money into savings before spending","Buy yourself a treat first","Ask for a pay rise"],
+  ["Which of these is a want?","A streaming subscription","Electricity at home","The school bus fare"],
+  ["If you spend more than you earn, you…","Run out of money or go into debt","Save money faster","Earn interest"],
+  ["$5 a week on snacks adds up to about how much in a year?","$260","$50","$5"],
+  ["A good first step when you want something expensive is…","Set a savings goal with an amount and a date","Buy it now and pay later","Stop saving for anything else"],
+  ["Which question helps you decide if something is a need?","Can I get by without it?","Is it popular right now?","Is it on sale?"]]},
+ m2:{t:'Saving and interest',mins:8,pts:["Saving means keeping money for later.","Interest is money a bank pays you for keeping your money with it.","Compound interest is interest earned on your interest, so savings grow faster over time.","An emergency fund is savings kept for surprise costs.","Inflation means prices rise over time, so money buys a little less each year."],qs:[
+  ["Interest on a savings account is…","Money the bank pays you for keeping your money there","A fee you pay the bank","A type of tax"],
+  ["You put $100 in an account paying 5% a year. After one year you have about…","$105","$150","$95"],
+  ["Compound interest means…","Earning interest on your interest too","Paying interest twice","Interest that stops after a year"],
+  ["At the same interest rate, which grows more by age 30?","$100 saved at 14","$100 saved at 20","They end up the same"],
+  ["An emergency fund is…","Savings kept for unexpected costs","Money for holidays","A loan from your parents"],
+  ["Why do some savings accounts pay 'bonus' interest?","To reward rules like adding money every month","Because banks are charities","Because the law says so"],
+  ["Prices rise 3% a year and your savings earn 1%. Your money…","Buys a little less each year","Buys more each year","Keeps exactly the same value"],
+  ["Inflation means…","Prices going up over time","Prices going down over time","Interest rates going up"],
+  ["A savings goal works best when it is…","Specific, with an amount and a date","Kept secret from yourself","As big as possible"],
+  ["In Australia, bank deposits up to a limit are protected by…","A government scheme called the Financial Claims Scheme","The share market","Your school"]]},
+ m3:{t:'Earning money and payslips',mins:8,pts:["Income can come from a job, pocket money, gifts or selling things.","A payslip shows gross pay, the tax taken out, and net pay.","Gross pay is before tax. Net pay is what you take home.","Employers pay superannuation (super) into a fund for your retirement.","Your Tax File Number (TFN) is your personal number in the tax system. Keep it private."],qs:[
+  ["Gross pay is…","Your pay before tax is taken out","Your pay after tax","Your pocket money"],
+  ["Net pay is…","What you take home after tax and deductions","Your pay before tax","Your yearly bonus"],
+  ["Superannuation is…","Money set aside for your retirement","A weekly bonus","A type of bank card"],
+  ["Who usually pays super into a worker's super fund?","Their employer","Their bank","Their school"],
+  ["Tax helps pay for things like…","Schools, hospitals and roads","Your employer's office","Shopping centre profits"],
+  ["A Tax File Number (TFN) is…","Your personal number in the tax system","Your bank card PIN","Your student ID"],
+  ["If you don't give your employer your TFN, they usually…","Take out more tax","Take out no tax","Can't pay you at all"],
+  ["Which is a common way for teens to earn money?","A casual job","A credit card","Borrowing to buy shares"],
+  ["Why keep your payslips?","To check you were paid correctly","Because they are worth money","To post them online"],
+  ["$15 an hour for 8 hours is…","$120","$150","$80"]]},
+ m4:{t:'Banks, cards and staying safe',mins:9,pts:["A debit card spends your own money. A credit card spends borrowed money that must be paid back.","'Buy now, pay later' splits a cost into instalments and can charge late fees.","Never share your PIN, passwords or one-time codes, even with someone who says they are from your bank.","Scams often create pressure to act right now.","If unsure, contact your bank using the number on its official website or card."],qs:[
+  ["A debit card spends…","Your own money in your account","Money borrowed from the bank","Store credit"],
+  ["A credit card spends…","Borrowed money you must pay back","Your own savings","Free money"],
+  ["'Buy now, pay later' means…","You pay in instalments, often with late fees if you miss one","It is always free","The shop pays for you"],
+  ["A message says 'Your account is locked, send us the code we texted you.' You should…","Not send it, and contact your bank yourself","Send the code quickly","Reply asking for more details"],
+  ["A common sign of a scam is…","Pressure to act right now","A clear receipt","A shop you already know"],
+  ["Which should you never share?","Your PIN","The name of your bank","Your favourite shop"],
+  ["Interest on a credit card balance you don't pay off is usually…","High","Zero","Paid to you"],
+  ["A strong password is…","Long and different for each account","Your birthday","The same for every site"],
+  ["An online deal looks too good to be true. It…","Might be a scam","Is always real","Means you should buy two"],
+  ["If you think you've been scammed, a good first step is…","Tell a parent and contact your bank straight away","Wait and see","Delete the messages and say nothing"]]},
+ m5:{t:'What is investing?',mins:9,pts:["Investing means buying something that may grow in value or pay income over time.","Saving is steadier but usually grows slowly. Investing can grow more, but it can also fall.","Investing usually suits money you won't need for five years or more.","Owning a share means owning a small part of a real company.","In this app, real money is only invested at a milestone, when your parent approves."],qs:[
+  ["Investing means…","Buying things that may grow in value or pay income","Keeping cash in a drawer","Spending on wants"],
+  ["Compared with saving, investing usually…","Can grow more, but can also fall","Is always safer","Never changes in value"],
+  ["Investing usually suits money you won't need for…","Five years or more","One week","Tomorrow"],
+  ["When you own a share, you own…","A small part of a company","A loan to a bank","A ticket to a game"],
+  ["A dividend is…","Part of a company's profit paid to its owners","A fee for buying shares","A type of tax"],
+  ["Why does starting early help?","Money has more time to grow and compound","Shares are cheaper for teens","Early investors pay no fees"],
+  ["Which is closest to gambling, not investing?","Betting on which way a price moves tomorrow","Holding a broad fund for ten years","Adding money to a plan every month"],
+  ["'Time in the market' means…","Staying invested over a long time","Checking prices every minute","Only buying on Mondays"],
+  ["Can investments lose money?","Yes, values can fall","No, never","Only on weekends"],
+  ["In this app, real money is invested when…","Your family reaches a milestone and your parent approves","You finish any task","You open the app"]]},
+ m6:{t:'Shares and ETFs',mins:9,pts:["The ASX (Australian Securities Exchange) is where Australian shares and ETFs are bought and sold.","An ETF (exchange-traded fund) holds a basket of investments and trades like a share.","Many ETFs follow an index: a list such as the 200 largest Australian companies.","Each ETF charges a yearly fee, shown as a percentage of the money invested.","A Product Disclosure Statement (PDS) explains what a fund is, its fees and its risks."],qs:[
+  ["The ASX is…","Australia's main stock exchange","A bank","A government department"],
+  ["An ETF is…","A fund holding a basket of investments that trades on an exchange","One company's share","A savings account"],
+  ["An index is…","A list of investments used to measure a market","A type of loan","A shop's price list"],
+  ["A fund that follows the 200 largest Australian companies is called…","An index fund","A cash account","A bond"],
+  ["One reason people like broad ETFs is…","They spread money across many companies in one go","They can't go down","They pay fixed interest"],
+  ["An ETF's yearly fee is usually shown as…","A percentage of the money invested","A one-off $1 charge","Nothing, ETFs are free"],
+  ["A 'unit' in an ETF is…","One small piece of the fund you can own","A type of interest","A bank branch"],
+  ["You buy whole units that cost $48 each with $100. How much is left over?","$4","$52","Nothing"],
+  ["A Product Disclosure Statement (PDS) tells you…","What a fund is, its fees and its risks","Tomorrow's price","Which fund to buy"],
+  ["ETF prices on the ASX change…","Throughout the trading day","Once a year","Never"]]},
+ m7:{t:'Risk and return',mins:9,pts:["In investing, risk means how much a value can move up and down.","Higher possible returns usually come with higher risk.","Shares are usually higher risk than bonds. Cash is usually the lowest.","A fall of 50% needs a rise of 100% to get back to where you started.","Your timeframe and how you'd feel in a fall both matter."],qs:[
+  ["In investing, risk means…","How much a value can move up and down","Only losing everything","The fee you pay"],
+  ["Higher possible returns usually come with…","Higher risk","No risk","Lower fees"],
+  ["Which is usually the lowest risk?","Cash in a bank account","Shares in one small company","A technology fund"],
+  ["Bonds are…","Loans to governments or companies that pay interest","Shares in a bank","Gold coins"],
+  ["Why might someone who needs their money soon hold more bonds and cash?","Values are usually steadier","They always grow faster","There is no reason"],
+  ["A fund rose 30% last year. This year it will…","Not necessarily rise again","Definitely rise again","Definitely fall"],
+  ["'Volatility' means…","How much prices jump around","A type of fee","A government rule"],
+  ["An investment falls 50%. What rise gets it back to where it started?","100%","50%","25%"],
+  ["Your comfort with risk is about…","How you'd feel and act if values fell","How much you like games","Only your age"],
+  ["Which is true?","No investment has a guaranteed high return","Some shares are guaranteed to rise","ETFs never fall"]]},
+ m8:{t:'Diversification',mins:8,pts:["Diversification means not putting all your eggs in one basket.","You can spread money across companies, countries and types of investment.","It limits the damage from any one fall, but it doesn't remove risk.","Funds that hold similar companies don't add much spread.","Rebalancing means moving back to the mix you chose after prices move."],qs:[
+  ["Diversification means…","Spreading money across many investments","Putting everything into your favourite company","Selling everything"],
+  ["Which is most diversified?","A world shares fund","Shares in one company","One rare trading card"],
+  ["Diversification…","Limits the damage from one bad investment, but doesn't remove risk","Guarantees a profit","Means you pay no fees"],
+  ["Holding both Australian and global shares spreads money across…","Countries","Only one company","Only bonds"],
+  ["Mixing shares and bonds can help because…","They don't always move the same way","Bonds always beat shares","Shares pay fixed interest"],
+  ["Rebalancing means…","Moving back to your chosen mix after prices move","Selling everything in a dip","Buying whatever rose most"],
+  ["Owning five different technology funds is…","Less spread out than it looks, because they hold similar companies","Perfectly diversified","Risk-free"],
+  ["A 'diversified' or 'balanced' fund is…","A ready-made mix of shares, bonds and cash","A fund with one share","A savings account"],
+  ["'Concentration risk' means…","Having too much in one thing","Losing focus in class","A bank fee"],
+  ["Why can your parent choose from many ETFs?","So your family can build its own mix","Because one fund is the best","To trade every day"]]},
+ m9:{t:'How markets move',mins:9,pts:["Prices move with company results, news, interest rates and how investors feel.","Falls (dips) and recoveries are a normal part of markets, though recoveries can take years.","Nobody can reliably predict short-term moves.","Investing the same amount regularly buys more units when prices are low. This is called dollar-cost averaging."],qs:[
+  ["Share prices move because of…","Company results, news, interest rates and investor feelings","Only the weather","A fixed timetable"],
+  ["A market 'dip' is…","A fall in prices","A dividend payment","A new fund"],
+  ["Over long periods, share markets have…","Had falls and recoveries, sometimes taking years","Only gone up","Only gone down"],
+  ["Can anyone reliably predict next week's prices?","No","Yes, experts always can","Yes, using social media"],
+  ["Dollar-cost averaging means…","Investing a fixed amount regularly, whatever the price","Waiting for the perfect day","Only buying when prices rise"],
+  ["When prices are lower, a fixed $50 buys…","More units","Fewer units","The same number of units"],
+  ["A 'bull market' is…","A period of rising prices","A period of falling prices","A farmers' market"],
+  ["A 'bear market' is…","A long period of falling prices","A period of rising prices","A zoo"],
+  ["When interest rates rise, bond prices often…","Fall","Always rise","Never change"],
+  ["A fall in value only becomes a real loss when you…","Sell","Wait","Check the price"]]},
+ m10:{t:'Thinking clearly about money',mins:8,pts:["Feelings drive many money mistakes.","FOMO (fear of missing out) and hype push people to buy after prices have jumped.","Panic pushes people to sell after prices have fallen.","Social media 'tips' are often ads, or simply wrong.","A written plan helps you stick to decisions when emotions run high."],qs:[
+  ["FOMO stands for…","Fear of missing out","Funds on market offer","Free online money offer"],
+  ["An influencer says a coin will '10x next week'. The best response is to…","Be sceptical, and check who's paying them and the risks","Buy as much as you can","Borrow money to buy it"],
+  ["Selling everything in a panic after a fall often means…","Locking in the loss","A guaranteed profit","Paying no tax"],
+  ["A written plan helps because…","It keeps decisions steady when emotions run high","It predicts prices","It removes all risk"],
+  ["'Past performance is not a reliable indicator of future performance' means…","Last year's results don't tell you next year's","Funds always repeat","Old funds are bad"],
+  ["Checking prices many times a day usually…","Makes people anxious and more likely to act rashly","Improves returns","Is required"],
+  ["A trustworthy source of money information is more likely to be…","A government site such as Moneysmart","An anonymous comment","A message from a stranger"],
+  ["'Get rich quick' offers are usually…","Too good to be true","Guaranteed","Government backed"],
+  ["Herd behaviour means…","Copying what everyone else does without thinking","Farming","Diversifying"],
+  ["Which is a good money habit?","Waiting a day before a big money decision","Deciding instantly","Following every tip"]]},
+ m11:{t:'Fees and costs',mins:8,pts:["Fees reduce returns every year, whether the fund goes up or down.","A management fee is a percentage of your balance each year.","Brokerage is a fee for each buy or sell.","Small differences in fees add up over decades.","A cheaper fund isn't automatically better. Compare what it holds too."],qs:[
+  ["A management fee of 0.20% a year on $1,000 is…","$2 a year","$20 a year","20 cents a year"],
+  ["Brokerage is…","A fee for buying or selling","Interest you earn","A tax refund"],
+  ["Why can trading often be costly?","Each trade can have a fee","Trading is always free","Banks pay you to trade"],
+  ["Over 30 years, a fund costing 1% a year instead of 0.2% usually leaves you…","Noticeably less money","The same amount","More money"],
+  ["Fees are charged…","Whether the fund goes up or down","Only in good years","Never"],
+  ["Investing on a schedule, in batches, can help by…","Keeping trading costs down","Guaranteeing profits","Removing all risk"],
+  ["Where can you find a fund's fees?","In its Product Disclosure Statement","In a text message","On a billboard"],
+  ["A cheaper fund is…","Not automatically better, so compare what it holds","Always the best","Always worse"],
+  ["The 'spread' when trading is…","The gap between the buying and selling price","A sandwich spread","A fee you get back"],
+  ["Which fee is charged each year as a percentage of your balance?","A management fee","Brokerage","A late fee"]]},
+ m12:{t:'Super and the long term',mins:9,pts:["Superannuation (super) is money saved for retirement, mostly paid in by employers.","Since 1 July 2025, the super guarantee rate employers must pay is 12% of ordinary wages.","Workers under 18 get the super guarantee if they work more than 30 hours in a week.","Super is invested for decades, so fees and compounding matter a lot.","You can usually only access super once you reach retirement age and meet the conditions. The ATO (Australian Taxation Office) website has the latest rules."],qs:[
+  ["Superannuation is…","Money saved for retirement","A weekly bonus","Pocket money"],
+  ["Super is usually invested for…","Decades","A week","It isn't invested"],
+  ["Since 1 July 2025, the super guarantee rate is…","12% of ordinary wages","5% of wages","25% of wages"],
+  ["Workers under 18 get the super guarantee if they work…","More than 30 hours in a week","Any hours at all","Only on weekends"],
+  ["Why does super grow so much over a working life?","Regular payments plus decades of compounding","It's guaranteed to double","The government adds the same amount every year"],
+  ["You can usually access super…","At retirement age, once you meet the conditions","Whenever you like","At 18"],
+  ["Having several super accounts can mean…","Paying several sets of fees","Earning double","Nothing at all"],
+  ["A 'long-term' investment horizon is…","Many years or decades","A few days","One month"],
+  ["Which helps most over the long term?","Starting early and staying consistent","Guessing the best day to buy","Changing funds every week"],
+  ["Where can you find free, independent information about super?","The government's Moneysmart website","A random social media post","A lottery ad"]]}
+};
+Object.values(MODS).forEach(m=>{m.v=3;m.qs=m.qs.map(([q,...o])=>({q,o,a:0}))});
+Object.entries(MODS).forEach(([id,m])=>{m.id=id;m.cat=LC.find(c=>c.mods.includes(id))});
+const PASS=8;
+
+/* ---------- tasks and state ---------- */
+const TASKS=()=>[
+ {id:1,t:'Wash the car',v:10,cat:'Home',rep:true,proof:'photo'},
+ {id:2,t:'Cook a family dinner',v:8,cat:'Home',rep:true,proof:'checkin'},
+ {id:3,t:'Read for 30 minutes, four times',v:5,cat:'Study',rep:true,proof:'note'},
+ {id:4,t:'Track a week of spending',v:6,cat:'Money skills',rep:false,proof:'note',due:7},
+ {id:5,t:'Mow the lawn',v:10,cat:'Home',rep:true,proof:'photo'},
+ {id:6,t:'Compare prices for new headphones',v:6,cat:'Money skills',rep:false,proof:'note',due:5}
+].map(t=>({st:'open',note:'',photo:null,reason:'',got:0,asked:0,...t}));
+const PROOF={none:'No proof',photo:'Photo',note:'Note',checkin:'Parent check-in'};
+const UI0=()=>({view:'parent',ptab:'home',ttab:'garden',doing:null,photo:null,note:'',ny:null,confirm:false,und:false,
+ shout:'',newT:'',newV:'',sugT:'',sugV:'',editSug:null,esT:'',esV:'',grow:null,review:false,focusAfter:null,focusSel:null,resetScroll:null,stages:{},
+ q:'',qcat:'all',qsort:'code',det:null,mod:null,res:null,edit:null,pchk:false,gAt:null,way:'now',etf:null,buyAmt:'',sellAmt:'',side:'buy',ochk:false,money:null,mAmt:'',sedit:null,schk:false,range:12,tpre:'open',from:'invest'});
+const HIST=12;
+const fresh=()=>({m:0,d:1,credits:0,life:0,cap:50,earned:0,showReal:false,autoMod:true,
+ cash:0,steadyCash:0,rules:{min:50},clk:1*1440+630,
+ plan:{on:true,amt:25,freq:'fortnightly',paused:false,skip:false,split:{EX07:50,EX21:50},auto:100},planMonths:0,
+ ladder:{level:1,target:100},miles:[],perk:'Movie night',
+ tasks:TASKS(),shout:[],sugg:[],mods:{},
+ price:{},ph:{},units:{},putIn:{},core:{},coreSet:null,
+ orders:[],hist:[],badges:{},pbadges:{},dip:false,log:[],audit:[],shoutLimit:2,shoutUsed:0,nid:100,oid:1,ui:UI0()});
+let S;
+
+/* ---------- engine ---------- */
+const U=id=>S.units[id]||0;
+const held=()=>FUNDS.filter(f=>U(f.id)>1e-9);
+const val=()=>FUNDS.reduce((a,f)=>a+U(f.id)*S.price[f.id],0);
+const put=()=>Object.values(S.putIn).reduce((a,b)=>a+b,0);
+const queued=()=>S.orders.filter(o=>o.st==='queued');
+const queuedBuy=()=>queued().filter(o=>o.side==='buy').reduce((a,o)=>a+o.amt,0);
+const planTxt=pl=>Object.keys(pl).map(id=>`${FUND[id].short} ${pl[id]}%`).join(' · ');
+const snap=()=>({m:S.m,c:S.life,p:put(),v:val()});
+const stamp=()=>'M'+S.m+' · '+clkTxt();
+const log=(a,w)=>S.log.unshift({m:S.m,a,w});
+const audit=(what,amt,dec='Approved',by='Sam')=>S.audit.unshift({at:stamp(),what,amt,dec,by});
+const perMonth=()=>S.plan.on&&!S.plan.paused?S.plan.amt*{weekly:4,fortnightly:2,monthly:1}[S.plan.freq]:0;
+const room=()=>S.cap>0?Math.max(0,S.cap-S.earned):Infinity;
+function addC(a){S.credits=cr(S.credits+a);S.life=cr(S.life+a)}
+function earn(a,w){const g=Math.min(a,room());S.earned+=g;addC(g);log(g,w+(g<a?' (monthly cap reached)':''));return g}
+const ordersBy=at=>S.orders.filter(o=>o.side==='buy'&&o.st==='done'&&o.done<=at);
+const ordersInCat=(c,at)=>ordersBy(at).filter(o=>Object.keys(o.parts).some(id=>FUND[id].cat===c));
+function stgAt(c,at){const os=ordersInCat(c,at);if(!os.length)return -1;const first=Math.min(...os.map(o=>o.done));return Math.min(12,(os.length-1)*2+Math.floor((at-first)/2))}
+const stg=c=>stgAt(c,S.m);
+const catFirstAt=(c,at)=>Math.min(...ordersInCat(c,at).map(o=>o.done));
+const catUnlocked=c=>S.ladder.level>=c.level;
+const pAt=(id,m)=>S.ph[id][Math.max(0,Math.min(S.ph[id].length-1,m+HIST))];
+const chgOver=(id,n)=>{const a=pAt(id,S.m-n);return a?S.price[id]/a-1:0};
+const Z=()=>S.ladder.target;
+const mileBase=()=>S.miles.reduce((a,m)=>a+m.amt,0);
+const mileTotal=()=>mileBase()+S.credits;
+const mileNext=()=>mileBase()+Z();
+const KIND={now:'Invest now',steady:'Steady plan',mile:'Milestone',sell:'Sell'};
+/* ---------- market clock (Sydney time, simulated) ----------
+   ASX normal trading is about 10:00 am to 4:00 pm on weekdays. Public holidays are ignored in this demo.
+   In the live app the partner says whether the market is open; the app never guesses. */
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],PRESET={open:1*1440+630,eve:1*1440+1100,wknd:5*1440+555};
+const dow=(c=S.clk)=>Math.floor(c/1440)%7,tod=(c=S.clk)=>c%1440;
+const isOpen=(c=S.clk)=>dow(c)<5&&tod(c)>=600&&tod(c)<960;
+function untilOpen(c=S.clk){if(isOpen(c))return 0;const t=tod(c);for(let k=0;k<8;k++){if((dow(c)+k)%7<5){const st=k*1440+600-t;if(st>0)return st}}return 0}
+const hm=t=>{t=Math.floor(t);const h=Math.floor(t/60)%24,m=t%60;return `${h%12||12}:${String(m).padStart(2,'0')} ${h<12?'am':'pm'}`};
+const clkTxt=(c=S.clk)=>`${DAYS[dow(c)]} ${hm(tod(c))}`;
+const opensTxt=()=>clkTxt(S.clk+untilOpen());
+function countdown(){let sec=Math.max(0,Math.ceil(untilOpen()*60));const d=Math.floor(sec/86400);sec%=86400;const h=Math.floor(sec/3600);sec%=3600;const m=Math.floor(sec/60),x=sec%60;return `${d?d+'d ':''}${d||h?h+'h ':''}${m}m ${String(x).padStart(2,'0')}s`}
+const mktLine=()=>isOpen()?`ASX open · closes 4:00 pm`:`ASX closed · opens ${opensTxt()} · in <span class="cd">${countdown()}</span>`;
+/* split an amount across a plan; every ETF line must meet the partner minimum */
+function splitParts(plan,amt){const parts={},bad=[];Object.keys(plan).forEach(id=>{const a=cr(amt*plan[id]/100);if(a>0){parts[id]={spend:a};if(a<S.rules.min)bad.push(id)}});return {parts,bad}}
+function execute(o){const at=stamp();
+ if(o.side==='buy'){Object.entries(o.parts).forEach(([id,p])=>{const u=p.spend/S.price[id];p.units=u;p.px=S.price[id];S.units[id]=U(id)+u;S.putIn[id]=(S.putIn[id]||0)+p.spend});
+  o.st='done';o.done=S.m;o.steps.push({s:'Bought',at,note:Object.entries(o.parts).map(([id,p])=>`${id}: ${p.units.toFixed(3)} units at ${money(p.px)}`).join(' · ')})}
+ else{const [id,p]=Object.entries(o.parts)[0],u=Math.min(p.units,U(id)),proceeds=cr(u*S.price[id]),frac=U(id)?u/U(id):0;
+  S.putIn[id]=(S.putIn[id]||0)*(1-frac);S.units[id]=U(id)-u;if(S.units[id]<1e-9){S.units[id]=0;S.putIn[id]=0}
+  S.cash=cr(S.cash+proceeds);o.amt=proceeds;o.st='done';o.done=S.m;o.steps.push({s:'Sold',at,note:`${u.toFixed(3)} units at ${money(S.price[id])} · ${money(proceeds)} back in the wallet`});log(proceeds,'Sale proceeds: '+id)}}
+function place(o){S.orders.unshift(o);if(isOpen())execute(o);else{o.st='queued';o.steps.push({s:'Waiting for the market',at:stamp(),note:`Buys when the ASX opens (${opensTxt()})`})}return o}
+function queueBuy(kind,parts,note){const amt=cr(Object.values(parts).reduce((a,p)=>a+p.spend,0));
+ return place({id:S.oid++,kind,side:'buy',amt,parts,st:'new',steps:[{s:kind==='mile'?'Approved':'Placed',at:stamp(),note}]})}
+function buyNow(id,amt){amt=cr(amt);if(amt<S.rules.min||amt>S.cash)return null;S.cash=cr(S.cash-amt);
+ const o=queueBuy('now',{[id]:{spend:amt}},`${money(amt)} from the wallet`);log(-amt,'Invest now: '+id);audit(`Invest now: buy ${id}`,amt,o.st==='done'?'Bought':'Order placed for market open');return o}
+function sellNow(id,amt){const v=U(id)*S.price[id];amt=cr(Math.min(amt,v));if(amt<=0)return null;const units=amt>=v-0.01?U(id):Math.min(U(id),amt/S.price[id]);
+ const o=place({id:S.oid++,kind:'sell',side:'sell',amt,parts:{[id]:{units}},st:'new',steps:[{s:'Placed',at:stamp(),note:`Sell about ${money(amt)}`}]});audit(`Sell ${id}`,o.amt,o.st==='done'?'Sold':'Order placed for market open');return o}
+function cancelQueued(o){if(o.st!=='queued'||o.kind==='mile')return;o.st='cancelled';o.steps.push({s:'Cancelled',at:stamp(),note:o.side==='buy'?'Money returned to the wallet':''});
+ if(o.side==='buy'){S.cash=cr(S.cash+o.amt);log(o.amt,'Order cancelled, money back in wallet')}audit(`${KIND[o.kind]} order`,o.amt,'Cancelled before the market opened')}
+function openMarket(){S.clk+=untilOpen();const q=queued();q.forEach(execute);return q.length}
+function addMoney(a){a=cr(a);if(a<=0)return;S.cash=cr(S.cash+a);log(a,'Added to wallet from bank');audit('Add money to wallet',a,'Transferred')}
+function withdraw(a){a=cr(Math.min(a,S.cash));if(a<=0)return;S.cash=cr(S.cash-a);log(-a,'Withdrawn to bank');audit('Withdraw from wallet',a,'Transferred')}
+function mileCheck(){const z=Z(),r=splitParts(S.core,z);
+ if(!Object.keys(S.core).length)return 'Set up the milestone plan first.';
+ if(r.bad.length)return `Each ETF in an order must be at least ${whole(S.rules.min)} (the partner's minimum). Use fewer ETFs in the milestone plan, or larger shares.`;
+ if(S.cash<z)return `The wallet has ${money(S.cash)} free. Add ${money(z-S.cash)} to the wallet first.`;
+ return ''}
+function invest(){const z=Z();if(S.credits<z||mileCheck())return null;
+ const lv=S.ladder.level,r=splitParts(S.core,z);S.cash=cr(S.cash-z);S.credits=cr(S.credits-z);
+ const o=queueBuy('mile',r.parts,`${money(z)} from the wallet for the Level ${lv} milestone`);o.level=lv;
+ log(-z,`Level ${lv} milestone invested from wallet`);audit(`Milestone: Level ${lv} (${planTxt(S.core)})`,z,o.st==='done'?'Approved and bought':'Approved, buys at market open');
+ S.miles.push({level:lv,amt:z,m:S.m,perk:S.perk,total:mileBase()+z});S.ladder.level++;S.perk='';S.badges.mile??=S.m;S.pbadges.pmile??=S.m;
+ S.hist[S.hist.length-1]=snap();return o}
+function steadyCheck(ms){if(S.steadyCash<S.plan.auto)return;const r=splitParts(S.plan.split,S.steadyCash);
+ if(r.bad.length||!Object.keys(r.parts).length)return;const amt=S.steadyCash;S.steadyCash=0;
+ const o=queueBuy('steady',r.parts,`${money(amt)} built up, so the steady plan auto-invests`);audit('Steady plan auto-invest: '+planTxt(S.plan.split),amt,o.st==='done'?'Bought automatically':'Automatic, buys at market open','Steady plan');ms&&ms.push(`steady plan auto-invested ${whole(amt)}`)}
+function steadyCollect(ms){
+ if(!(S.plan.on&&!S.plan.paused))return;
+ if(S.plan.skip){S.plan.skip=false;log(0,'Steady plan skipped');ms.push('steady plan skipped');return}
+ const a=perMonth();if(a<=0)return;S.steadyCash=cr(S.steadyCash+a);S.planMonths++;log(a,'Steady plan: collected by PayTo into the wallet');ms.push('steady plan +'+whole(a));steadyCheck(ms)}
+function advance(){
+ S.m++;const n=openMarket();const ms=n?[`${n} waiting order${n===1?'':'s'} filled at market open`]:[];S.clk=PRESET.open;S.ui.tpre='open';
+ FUNDS.forEach(f=>{S.price[f.id]*=1+priceSource.monthlyReturn(f.id,S.m);S.ph[f.id].push(S.price[f.id])});
+ if(S.dip){if(val()>0)S.badges.dip??=S.m;S.dip=false}
+ steadyCollect(ms);
+ if(S.planMonths>=3)S.pbadges.plan3??=S.m;if(S.planMonths>=6)S.pbadges.plan6??=S.m;if(S.m>=12)S.pbadges.year??=S.m;
+ S.tasks.forEach(t=>{if(t.rep&&(t.st==='approved'||t.st==='notyet')){t.st='open';t.note='';t.reason='';t.photo=null}});
+ S.earned=0;S.shoutUsed=0;
+ if(S.orders.some(o=>o.side==='buy'&&o.st==='done'&&S.m-o.done>=6))S.badges.six??=S.m;
+ S.hist.push(snap());return ms;
+}
+function dip(){
+ if(S.dip)return;
+ if(val()<=0){say('Nothing is invested yet, so a dip changes nothing.');return}
+ FUNDS.forEach(f=>{S.price[f.id]*=1+f.dip;S.ph[f.id][S.ph[f.id].length-1]=S.price[f.id]});S.dip=true;S.hist[S.hist.length-1]=snap();
+ say('Simulated dip: share funds fell about 9 to 13%, bonds about 1.5%, cash not at all. Made-up numbers. Available again next month.');
+}
+/* modules */
+const MS=id=>S.mods[id]||(S.mods[id]={attempts:0,best:0,passed:false,cred:null,got:0,quiz:null,last:null});
+function startQuiz(id){const m=MS(id),M=MODS[id],r=mul(hash(id+'#'+m.attempts));
+ const qo=shuffle(M.qs.map((_,i)=>i),r),oo=qo.map(qi=>shuffle(M.qs[qi].o.map((_,j)=>j),r));
+ m.quiz={qo,oo,i:0,ans:Array(M.qs.length).fill(null)};}
+function grade(id){const m=MS(id),M=MODS[id],q=m.quiz;let score=0;q.qo.forEach((qi,k)=>{if(q.ans[k]===M.qs[qi].a)score++});
+ m.attempts++;m.last={score,qo:q.qo,oo:q.oo,ans:q.ans.slice(),at:S.m};m.best=Math.max(m.best,score);m.quiz=null;
+ if(score>=PASS&&!m.passed){m.passed=true;m.passedAt=S.m;S.badges.mod??=S.m;
+  if(S.autoMod){m.cred='given';m.got=earn(M.v,'Module: '+M.t);audit('Module passed: '+M.t+` (${score}/10)`,m.got,'Auto-added (module setting)','Setting chosen by Sam')}
+  else m.cred='waiting';
+  const c=M.cat;if(c.mods.every(x=>MS(x).passed))S.badges.cert??=S.m;}
+ return score;}
+function approveMod(id){const m=MS(id),M=MODS[id];m.cred='given';m.got=earn(M.v,'Module: '+M.t);audit('Module passed: '+M.t+` (${m.last.score}/10)`,m.got)}
+function bootPass(id,score){const m=MS(id),M=MODS[id];startQuiz(id);m.quiz.qo.forEach((qi,k)=>{m.quiz.ans[k]=k<score?M.qs[qi].a:(M.qs[qi].a+1)%3});grade(id)}
+/* decisions (each one is logged in the audit) */
+function approveTask(t){const g=earn(t.v,'Task: '+t.t);t.st='approved';t.got=g;t.asked=t.v;S.badges.task??=S.m;audit('Task: '+t.t,g,g<t.v?'Approved (cap cut it)':'Approved');return g}
+function notYet(t,r){t.st='notyet';t.reason=r;audit('Task: '+t.t,0,'Not yet: '+r)}
+
+function boot(keep){
+ S=fresh();if(keep){S.ui.view=keep.view;S.ui.review=keep.review}
+ FUNDS.forEach(f=>{let p=f.p0;const a=[p];for(let m=-HIST+1;m<=0;m++){p*=1+priceSource.monthlyReturn(f.id,m);a.push(p)}S.ph[f.id]=a;S.price[f.id]=p});
+ S.hist.push(snap());S.core={EX01:50,EX07:50};S.coreSet=0;audit('Milestone plan set up: '+planTxt(S.core),0,'Set up');audit('Steady plan set up: '+planTxt(S.plan.split),0,'Set up');
+ addMoney(150);
+ [[1,3],[2,5],[1,2],[1,2,3,5],[1,2,3,5],[1,2,3,5],[1,2,3,5]].forEach((ids,i)=>{
+  ids.forEach(id=>{const t=S.tasks.find(x=>x.id===id);if(t.st==='open')approveTask(t)});
+  if(i===1)bootPass('m1',9);if(i===3)bootPass('m2',8);if(i===5)bootPass('m3',6);
+  if(i===2)buyNow('EX08',60);
+  if(S.credits>=Z()){if(S.cash<Z())addMoney(100);invest()}
+  advance();
+ });
+ const car=S.tasks.find(t=>t.id===1);car.st='submitted';car.photo='car';car.note='Did the inside too.';
+ const t4=S.tasks.find(t=>t.id===4);t4.note='Wrote it on my phone.';notYet(t4,'Nearly there, finish it off');
+ S.shout.push({id:S.nid++,text:'Helped Mrs Lee next door carry her shopping up the stairs.',st:'submitted'});S.shoutUsed=1;
+ S.sugg.push({id:S.nid++,t:'Wash the dog',v:12,st:'submitted'});
+ S.perk='Movie night';
+ Object.keys(FCAT).forEach(c=>S.ui.stages[c]=stg(c));
+}
+const say=t=>{$('#msg').textContent=t};
+const waiting=()=>[...S.tasks.filter(t=>t.st==='submitted').map(o=>({k:'task',o})),
+ ...Object.keys(MODS).filter(id=>S.mods[id]?.cred==='waiting').map(id=>({k:'mod',o:MODS[id]})),
+ ...S.shout.filter(s=>s.st==='submitted').map(o=>({k:'shout',o})),...S.sugg.filter(s=>s.st==='submitted').map(o=>({k:'sugg',o}))];
+const RV=()=>S.ui.review?'<span class="rv">Needs legal review</span>':'';
+const DISC=()=>`<p class="fine">General information only, not advice. Example funds; fees and returns are made up.${RV()}</p>`;
+const CREDITS_COPY=()=>`<p class="fine">Credits are points, not money. Every ${Z()} credits is a milestone: when Sam approves, he invests ${whole(Z())} for you.${RV()}</p>`;
+
+/* ---------- charts ---------- */
+const ax=v=>v>=1000?(v/1000).toFixed(v%1000?1:0)+'k':v;
+function chart(W,H,data,ser,o={}){
+ const n=data.length,L=46,R=12,T=o.T||12,B=24;
+ const top=Math.ceil(Math.max(o.min||50,...data.flatMap(d=>ser.map(s=>d[s.k])))*1.08/50)*50;
+ const x=i=>L+(n<2?0:i*(W-L-R)/(n-1)),y=v=>T+(1-v/top)*(H-T-B);
+ const step=Math.max(1,Math.ceil(n/(W<300?4:6))),tick=o.tick||((d,i)=>i%step===0),lab=o.lab||(d=>'M'+d.m);
+ let s='<g font-size="13" fill="#5b6b64">'+[0,top/2,top].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#e3e9e5"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${o.unit||''}${ax(v)}</text>`).join('')
+  +data.map((d,i)=>tick(d,i)?`<text x="${x(i)}" y="${H-5}" text-anchor="middle">${lab(d,i)}</text>`:'').join('')+'</g>';
+ ser.forEach(q=>{let p;
+  if(q.step){p=`M${x(0)} ${y(data[0][q.k])}`;data.forEach((d,i)=>{if(i)p+=`H${x(i).toFixed(1)}V${y(d[q.k]).toFixed(1)}`})}
+  else p=data.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(d[q.k]).toFixed(1)}`).join('');
+  if(q.fill)s+=`<path d="${p}L${x(n-1)} ${y(0)}L${x(0)} ${y(0)}Z" fill="${q.fill}"/>`;
+  s+=`<path d="${p}" fill="none" stroke="${q.c}" stroke-width="${q.w||2.5}" ${q.dash?'stroke-dasharray="4 3"':''} stroke-linejoin="round"/>`;
+  if(!q.dash)s+=`<circle cx="${x(n-1)}" cy="${y(data[n-1][q.k])}" r="4" fill="${q.c}"/>`;
+ });
+ if(o.note)s+=o.note.map((t,i)=>`<text x="${L}" y="${16+i*16}" font-size="13" font-weight="600" fill="#13201b">${t}</text>`).join('');
+ return s;
+}
+function growData(){const N=48,rm=Math.pow(1.05,1/12)-1,c=S.ui.grow??perMonth();let v=val()+queuedBuy()+S.cash+S.steadyCash,p=put()+queuedBuy()+S.cash+S.steadyCash;const d=[{m:0,v,p}];
+ for(let i=1;i<=N;i++){v=v*(1+rm)+c;p+=c;d.push({m:i,v,p})}return d}
+function priceChart(W,H,arr,m0){const L=50,R=12,T=12,B=24,n=arr.length,lo=Math.min(...arr),hi=Math.max(...arr),pad=(hi-lo)*.12||1,a=lo-pad,b=hi+pad;
+ const x=i=>L+(n<2?0:i*(W-L-R)/(n-1)),y=v=>T+(1-(v-a)/(b-a))*(H-T-B),step=Math.max(1,Math.ceil(n/(W<300?4:6)));
+ let s='<g font-size="13" fill="#5b6b64">'+[a+pad,(a+b)/2,b-pad].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#e3e9e5"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">$${v.toFixed(v<100?1:0)}</text>`).join('')
+  +arr.map((v,i)=>i%step===0?`<text x="${x(i)}" y="${H-5}" text-anchor="middle">M${m0+i}</text>`:'').join('')+'</g>';
+ const d=arr.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join('');
+ return s+`<path d="${d}L${x(n-1)} ${H-B}L${x(0)} ${H-B}Z" fill="#1f6b4f14"/><path d="${d}" fill="none" stroke="#1f6b4f" stroke-width="2.5" stroke-linejoin="round"/><circle cx="${x(n-1)}" cy="${y(arr[n-1])}" r="4" fill="#1f6b4f"/>`}
+const etfSeries=id=>{const all=S.ph[id],r=S.ui.range,k=r==='all'?all.length:Math.min(all.length,r+1);return {arr:all.slice(-k),m0:S.m-k+1}};
+const spark=id=>{const a=S.ph[id].slice(-13),lo=Math.min(...a),hi=Math.max(...a),d=a.map((v,i)=>`${i?'L':'M'}${(i*60/12).toFixed(1)} ${(22-(v-lo)/((hi-lo)||1)*20).toFixed(1)}`).join('');return `<svg class="spark" viewBox="0 0 60 24" aria-hidden="true"><path d="${d}" fill="none" stroke="#5b6b64" stroke-width="1.6"/></svg>`};
+const CH={
+ e:(W,H)=>{const q=etfSeries(S.ui.etf);return priceChart(W,H,q.arr,q.m0)},
+ p:(W,H)=>chart(W,H,S.hist,[{k:'v',c:'#1f6b4f',fill:'#1f6b4f1f'},{k:'p',c:'#8a9a93',step:1,dash:1,w:2}],{unit:'$'}),
+ t:(W,H)=>chart(W,H,S.hist,[{k:'c',c:'#2f9a4f',fill:'#ffc83d55',step:1}].concat(S.showReal?[{k:'v',c:'#1f6b4f',w:2}]:[])),
+ g:(W,H)=>chart(W,H,growData(),[{k:'v',c:'#1f6b4f',fill:'#1f6b4f1f'},{k:'p',c:'#8a9a93',dash:1,w:2}],{unit:'$',T:58,tick:(d,i)=>i%12===0,lab:(d,i)=>'Age '+(14+i/12),note:['Illustration based on','an assumed return.','Not a prediction.']})
+};
+function drawCharts(){document.querySelectorAll('.fig[data-chart]').forEach(f=>{const s=f.querySelector('svg'),W=f.clientWidth,H=f.clientHeight;if(!W)return;s.setAttribute('viewBox',`0 0 ${W} ${H}`);s.innerHTML=CH[f.dataset.chart](W,H)})}
+
+/* ---------- garden ---------- */
+function plantSVG(c,st){
+ const C=FCAT[c],P=C.pal,r=mul(hash(c+'plant'));let s='';
+ if(C.shape==='tree'){const n=3+Math.floor(st/3);
+  s+='<ellipse cx="0" cy="2" rx="30" ry="5" fill="#00000022"/><path d="M-6 0Q-3-40-2-66L2-66Q3-40 6 0Z" fill="#8a6a4f"/><path d="M1 0Q2-40 2-66L4-64Q4-40 6 0Z" fill="#b39374"/><path d="M-1-48Q-12-56-20-60M1-56Q12-62 18-68" stroke="#8a6a4f" stroke-width="3" fill="none" stroke-linecap="round"/>';
+  for(let k=0;k<n;k++){const a=k/n*Math.PI*2,cx=Math.cos(a)*(12+r()*12),cy=-84+Math.sin(a)*(9+r()*6);s+=`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(16+r()*7).toFixed(1)}" ry="${(12+r()*5).toFixed(1)}" fill="${P[k%3]}"/>`}
+  s+=`<ellipse cx="0" cy="-92" rx="18" ry="13" fill="${P[2]}"/><ellipse cx="6" cy="-98" rx="9" ry="5" fill="#ffffff" opacity=".3"/>`}
+ if(C.shape==='bush'){
+  s+='<ellipse cx="0" cy="2" rx="24" ry="5" fill="#00000022"/><path d="M0 0Q-3-30-14-56M0 0Q3-34 12-62M0 0Q0-34 0-74" stroke="#5b8a3a" stroke-width="3" fill="none" stroke-linecap="round"/><g fill="#6e9e48">';
+  for(let k=0;k<6+st;k++){const cx=(r()-.5)*34,cy=-18-r()*44;s+=`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="7" ry="2" transform="rotate(${Math.round((r()-.5)*80)} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`}
+  s+='</g>';for(let k=0;k<10+st*3;k++){const a=r()*Math.PI*2,d=Math.sqrt(r());s+=`<circle cx="${(Math.cos(a)*d*25).toFixed(1)}" cy="${(-62+Math.sin(a)*d*21).toFixed(1)}" r="${(2.8+r()*2.6).toFixed(1)}" fill="${r()>.4?P[0]:P[1]}"/>`}}
+ if(C.shape==='shrub'){const n=3+Math.floor(st/3);
+  s+='<ellipse cx="0" cy="2" rx="32" ry="5" fill="#00000022"/>';
+  for(let k=0;k<n;k++){const cx=(k/(n-1)-.5)*32+(r()-.5)*4;s+=`<ellipse cx="${cx.toFixed(1)}" cy="${(-14-r()*8).toFixed(1)}" rx="${(13+r()*5).toFixed(1)}" ry="${(12+r()*5).toFixed(1)}" fill="${P[k%3]}"/>`}
+  s+=`<ellipse cx="0" cy="-28" rx="14" ry="11" fill="${P[2]}"/><ellipse cx="4" cy="-33" rx="6" ry="3.5" fill="#ffffff" opacity=".45"/>`}
+ return s;
+}
+const FEAT={
+ c1:'<g transform="translate(30 270)"><ellipse cx="0" cy="2" rx="16" ry="3" fill="#00000022"/><path d="M-4 0H4L3-22H-3Z" fill="#c9c4b8"/><path d="M-18-24H18Q16-16 0-15Q-16-16-18-24Z" fill="#d8d3c7"/><ellipse cx="0" cy="-24" rx="18" ry="4" fill="#7cc3e0"/></g>',
+ c2:'<g transform="translate(352 226)"><ellipse cx="0" cy="2" rx="24" ry="3" fill="#00000022"/><rect x="-20" y="-12" width="40" height="4" rx="1.5" fill="#a86a43"/><rect x="-20" y="-22" width="40" height="4" rx="1.5" fill="#a86a43"/><rect x="-17" y="-22" width="3" height="22" fill="#7a4a2e"/><rect x="14" y="-22" width="3" height="22" fill="#7a4a2e"/></g>',
+ c3:[[150,150],[214,140],[262,168]].map(([x,y])=>`<g transform="translate(${x} ${y})"><ellipse rx="4.5" ry="3.2" fill="#ffc83d"/><path d="M-1-3V3M1.6-3V3" stroke="#1a1a12" stroke-width="1.3"/><ellipse cx="-1" cy="-4.2" rx="2.6" ry="1.7" fill="#fff" opacity=".9"/></g>`).join(''),
+ c4:'<ellipse cx="160" cy="288" rx="38" ry="9" fill="#4f9a4c"/><ellipse cx="160" cy="287" rx="34" ry="7.5" fill="#5fb3d6"/><ellipse cx="150" cy="286" rx="12" ry="2" fill="#a9dcef" opacity=".8"/><ellipse cx="175" cy="288" rx="6" ry="2.4" fill="#4fae5a"/>',
+ c5:'<g transform="translate(18 236)"><rect x="-2" y="-34" width="4" height="34" fill="#8a6a4f"/><rect x="-10" y="-52" width="20" height="18" fill="#e46a4f"/><path d="M-13-52L0-62L13-52Z" fill="#a8432f"/><circle cx="0" cy="-44" r="3.5" fill="#5a2a1a"/></g>',
+ c6:Array.from({length:18},(_,i)=>{const x=12+i*22;return `<path d="M${x} 300V292" stroke="#4f8f3a" stroke-width="2"/><circle cx="${x}" cy="291" r="3.6" fill="${['#ff8a8a','#ffc83d','#f6f1ff','#ff9fd0'][i%4]}"/>`}).join('')
+};
+const SLOTS=[[118,238],[174,238],[230,238],[286,238],[62,238],[90,258],[146,258],[202,258],[258,258],[314,258]];
+const heldCats=(at=S.m)=>Object.keys(FCAT).filter(c=>stgAt(c,at)>=0).sort((a,b)=>catFirstAt(a,at)-catFirstAt(b,at)||a.localeCompare(b));
+const doneBy=(c,at)=>c.mods.every(x=>S.mods[x]?.passed&&S.mods[x].passedAt<=at);
+const hasB=(k,at)=>S.badges[k]!=null&&S.badges[k]<=at;
+const monthR=i=>{const h=S.hist;if(i<1||!h[i]||!h[i-1]||h[i-1].v<=0)return null;const dp=h[i].p-h[i-1].p;return (h[i].v-h[i-1].v-dp)/(h[i-1].v+dp)};
+const wx=r=>r==null?'sun':r>=.01?'sun':r>=0?'part':r>-.03?'cloud':'rain';
+const wxAt=at=>at===S.m&&S.dip?'rain':wx(monthR(at));
+const SKY={sun:['#86cff1','#e2f5fb'],part:['#9cd3ec','#e6f3f7'],cloud:['#b3c3ce','#e3e9ed'],rain:['#9fb1bf','#dbe4ea']};
+function garden(at=S.m){
+ const now=at===S.m,w=wxAt(at),p=now?Math.min(1,S.credits/S.ladder.target):.25,cats=heldCats(at),k=cats.length>7?.68:cats.length>4?.8:1;
+ let s=`<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" role="img" aria-label="${esc(gardenText(at))}"><defs><linearGradient id="sky${at}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${SKY[w][0]}"/><stop offset="1" stop-color="${SKY[w][1]}"/></linearGradient></defs><rect width="400" height="300" fill="url(#sky${at})"/>`;
+ if(w==='sun'&&hasB('dip',at))s+='<g fill="none" stroke-width="7" opacity=".5">'+['#ff8a8a','#ffc83d','#8fd18a','#7cc3e0'].map((c,i)=>`<path d="M${40+i*7} 230A${160-i*7} ${160-i*7} 0 0 1 ${360-i*7} 230" stroke="${c}"/>`).join('')+'</g>';
+ if(w==='sun'||w==='part')s+='<circle cx="330" cy="62" r="36" fill="#ffe486" opacity=".55"/><circle cx="330" cy="62" r="24" fill="#ffc83d"/>';
+ if(w==='sun')s+='<g fill="#fff" opacity=".9"><ellipse cx="86" cy="62" rx="36" ry="11"/><ellipse cx="104" cy="54" rx="22" ry="14"/></g>';
+ if(w==='part')s+='<g fill="#fff"><ellipse cx="300" cy="80" rx="40" ry="14"/><ellipse cx="322" cy="70" rx="26" ry="16"/><ellipse cx="100" cy="60" rx="44" ry="14"/><ellipse cx="124" cy="50" rx="26" ry="16"/><ellipse cx="210" cy="96" rx="30" ry="9"/></g>';
+ if(w==='cloud'||w==='rain')s+=`<g fill="${w==='rain'?'#8d9aa5':'#a7b4be'}"><ellipse cx="90" cy="62" rx="48" ry="16"/><ellipse cx="118" cy="50" rx="30" ry="18"/><ellipse cx="220" cy="74" rx="44" ry="15"/><ellipse cx="246" cy="62" rx="26" ry="16"/><ellipse cx="330" cy="58" rx="50" ry="17"/><ellipse cx="350" cy="46" rx="28" ry="16"/></g>`;
+ s+='<path d="M0 176Q90 128 190 166T400 156V300H0Z" fill="#acdaa2"/><path d="M0 204Q120 178 232 198T400 192V300H0Z" fill="#82c674"/>';
+ if(hasB('six',at)){s+='<g fill="#c9a77c">';for(let x=6;x<400;x+=24)s+=`<rect x="${x-1.5}" y="196" width="3" height="20"/>`;s+='<rect x="0" y="201" width="400" height="2.5"/><rect x="0" y="209" width="400" height="2.5"/></g>'}
+ s+='<path d="M0 226Q200 210 400 226V300H0Z" fill="#5daa58"/><path d="M0 262Q200 252 400 262V300H0Z" fill="#4f9a4c"/>';
+ if(doneBy(LC[4],at))s+=FEAT.c5;if(doneBy(LC[1],at))s+=FEAT.c2;
+ cats.forEach((c,i)=>{const sl=SLOTS[i%SLOTS.length],st=stgAt(c,at);let grew=false;if(now){grew=S.ui.stages[c]!==st;S.ui.stages[c]=st}
+  s+=`<g transform="translate(${sl[0]} ${sl[1]}) scale(${((0.72+st*0.045)*k*(sl[1]<250?.9:1)).toFixed(2)})"><g class="${grew?'grew':''}">${plantSVG(c,st)}</g></g>`});
+ if(!cats.length)s+='<ellipse cx="200" cy="250" rx="22" ry="5" fill="#7a5a3a" opacity=".55"/>';
+ if(doneBy(LC[0],at))s+=FEAT.c1;if(doneBy(LC[3],at))s+=FEAT.c4;
+ if(hasB('mile',at))s+=[[292,296],[308,288],[324,282]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="8" ry="3" fill="#c9c4b8"/>`).join('');
+ if(doneBy(LC[5],at))s+=FEAT.c6;if(doneBy(LC[2],at))s+=FEAT.c3;
+ const h=10+p*34;
+ s+=`<g transform="translate(372 270)"><path d="M0 0V${(-h).toFixed(1)}" stroke="#4f8f3a" stroke-width="3" stroke-linecap="round"/><ellipse cx="-7" cy="${(-h+4).toFixed(1)}" rx="${(4+p*6).toFixed(1)}" ry="3" fill="#6cbf5a" transform="rotate(-25 -7 ${(-h+4).toFixed(1)})"/><ellipse cx="7" cy="${(-h+8).toFixed(1)}" rx="${(4+p*6).toFixed(1)}" ry="3" fill="#6cbf5a" transform="rotate(25 7 ${(-h+8).toFixed(1)})"/><path d="M-24 0H24L20 20H-20Z" fill="#a86a43"/><path d="M-24 0H24V5H-24Z" fill="#c4865a"/></g>`;
+ if(w==='rain'){const r=mul(7);s+=`<g class="${now?'rain':''}" stroke="#6f97b6" stroke-width="1.6" stroke-linecap="round" opacity=".7">`;for(let q=0;q<46;q++){const x=r()*410-10,y=r()*290-10;s+=`<path d="M${x.toFixed(0)} ${y.toFixed(0)}l-2 9"/>`}s+='</g>'}
+ return s+'</svg>';
+}
+const WXN={sun:'sunny',part:'mostly sunny',cloud:'cloudy',rain:'rainy'};
+function gardenText(at=S.m){const pl=heldCats(at).map(c=>FCAT[c].plant.toLowerCase()).join(', ');return `Mia's garden in Month ${at}${pl?', with '+pl:''}, ${WXN[wxAt(at)]} sky.`}
+function wxIcon(w){const sun='<circle cx="13" cy="13" r="7" fill="#ffc83d"/>',cl=(x,y,c)=>`<g fill="${c}"><ellipse cx="${x}" cy="${y}" rx="10" ry="6"/><ellipse cx="${x+6}" cy="${y-4}" rx="7" ry="6"/></g>`;
+ return `<svg viewBox="0 0 32 32" aria-hidden="true">${w==='sun'?'<circle cx="16" cy="16" r="12" fill="#ffe486" opacity=".6"/><circle cx="16" cy="16" r="8" fill="#ffc83d"/>':w==='part'?sun+cl(18,22,'#dfe7ec'):w==='cloud'?cl(12,14,'#c3ccd3')+cl(17,21,'#a7b4be'):cl(14,14,'#8d9aa5')+'<path d="M10 23l-2 5M16 23l-2 5M22 23l-2 5" stroke="#6f97b6" stroke-width="2" stroke-linecap="round"/>'}</svg>`}
+const NOTES={au:['Big Australian banks and miners shared their latest results.','News about interest rates moved Australian shares.'],sm:['Smaller companies moved more than big ones, as they often do.','Some smaller companies reported results.'],
+ gl:['Large overseas companies shared their latest results.','Changes in the Australian dollar affected overseas shares.'],em:['News from fast-growing economies moved prices.','Commodity prices affected some emerging markets.'],
+ se:['News in technology and healthcare moved this group.','Focused funds moved more than the wider market.'],pr:['Interest-rate news affected property owners.','Rent and building news moved property prices.'],
+ bo:['Interest-rate news moved bond prices a little.','Bonds paid their regular interest.'],ca:['Cash earned its usual small amount of interest.','Cash stayed steady, as it usually does.'],
+ di:['The mix of shares and bonds kept moves smaller.','Shares and bonds moved in different ways, which smoothed things out.'],et:['Companies in the screened list moved with the wider market.','The ethical rules stayed the same this month.']};
+const WXLINE={sun:'A sunny month: prices rose a little.',part:'A calm month: prices barely moved.',cloud:'A cloudy month: prices dipped a little. Clouds pass.',rain:"A rainy month: prices fell more than usual. Rain is part of every garden's year."};
+function insights(){
+ return heldCats().map(c=>{const fs=held().filter(f=>f.cat===c),mv=fs.reduce((a,f)=>a+chgOver(f.id,1),0)/(fs.length||1),w=wx(mv),N=NOTES[c];
+  return `<div class="wx">${wxIcon(w)}<div><b>${FCAT[c].t}: ${WXN[w]}</b><p class="fine" style="margin:2px 0 0">${WXLINE[w]} ${N[hash(c+'|'+S.m)%N.length]}${S.showReal?` About ${mv>=0?'+':'−'}${Math.abs(mv*100).toFixed(1)}% this month.`:''}</p></div></div>`}).join('');
+}
+
+/* ---------- small pieces ---------- */
+const IC={home:'M3 11l9-7 9 7v9h-6v-6H9v6H3z',approve:'M4 4h16v16H4zM4 14h5l1 2h4l1-2h5',plan:'M4 7h10M18 7h2M4 17h4M12 17h8M18 7a2 2 0 1 1-4 0a2 2 0 1 1 4 0M12 17a2 2 0 1 1-4 0a2 2 0 1 1 4 0',invest:'M4 19h16M7 15l4-4 3 3 5-6M15 8h4v4',log:'M6 3h9l4 4v14H6zM9 11h7M9 15h7M9 7h3',
+ garden:'M12 21V11M12 11c0-4 3-7 8-7 0 5-3 7-8 7zM12 15c0-3-2-5-7-5 0 4 2 5 7 5z',tasks:'M10 6h10M10 12h10M10 18h10M4 6l1.5 1.5L8 5M4 12l1.5 1.5L8 11M4 18l1.5 1.5L8 17',learn:'M3 8l9-4 9 4-9 4zM7 10v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5',journey:'M4 4v16h16M8 15l3-4 3 2 5-6'};
+const tabs=(w,list)=>list.map(([id,label,dot,dl])=>{const sel=S.ui[w+'tab']===id;return `<button role="tab" id="${w}-tab-${id}" data-tab="${w}:${id}" aria-selected="${sel}" aria-controls="${w}Scr" tabindex="${sel?0:-1}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${IC[id]}"/></svg>${label}${dot?`<span class="dot" aria-label="${dl}">${dot}</span>`:''}</button>`}).join('');
+const sw=(k,on,label)=>`<label class="sw"><input type="checkbox" id="sw-${k}" data-set="${k}" ${on?'checked':''} aria-label="${label}"><span></span></label>`;
+const bar=(c,t,label='Progress to milestone',cls='')=>`<div class="bar ${cls}" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${t}" aria-valuenow="${Math.round(Math.min(c,t))}"><i style="width:${Math.min(100,t?c/t*100:0)}%"></i></div>`;
+const STAR=Array.from({length:10},(_,i)=>{const a=Math.PI/5*i-Math.PI/2,r=i%2?7:15;return `${(26+r*Math.cos(a)).toFixed(1)},${(26+r*Math.sin(a)).toFixed(1)}`}).join(' ');
+const badge=(on,n,c,extra='')=>`<div class="bdg ${on?'':'off'}"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24" fill="${on?c:'#e6ebe8'}"/><circle cx="26" cy="26" r="18" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2"/><polygon points="${STAR}" fill="${on?'#fff':'#c9d2cd'}"/></svg>${n}${on?'':'<br>not yet'}${extra}</div>`;
+function photo(k){const P={
+ car:'<rect width="60" height="60" fill="#cfe9f7"/><rect y="42" width="60" height="18" fill="#9aa5ad"/><path d="M10 40h40l-4-10H16z" fill="#3b7dd8"/><rect x="8" y="38" width="44" height="8" rx="3" fill="#2f6bc0"/><circle cx="18" cy="47" r="5" fill="#222"/><circle cx="42" cy="47" r="5" fill="#222"/>',
+ lawn:'<rect width="60" height="60" fill="#5daa58"/>'+[0,1,2,3,4,5].map(i=>`<rect x="${i*10}" width="5" height="60" fill="#6fbb69"/>`).join('')+'<rect x="36" y="30" width="16" height="10" rx="2" fill="#d93f3a"/><path d="M44 30L30 12" stroke="#333" stroke-width="2"/>',
+ plate:'<rect width="60" height="60" fill="#f3e6d6"/><circle cx="30" cy="30" r="20" fill="#fff"/><circle cx="30" cy="30" r="14" fill="#f2b36b"/><circle cx="25" cy="27" r="4" fill="#4fae5a"/><circle cx="34" cy="33" r="4" fill="#d9534f"/>',
+ book:'<rect width="60" height="60" fill="#efe7da"/><path d="M10 18h18q2 0 2 2v26q0-2-2-2H10z" fill="#fff" stroke="#c9b9a0"/><path d="M50 18H32q-2 0-2 2v26q0-2 2-2h18z" fill="#fff" stroke="#c9b9a0"/><path d="M14 24h10M14 29h10M34 24h12M34 29h12" stroke="#b7a68c"/>'};
+ return `<svg viewBox="0 0 60 60" role="img" aria-label="Placeholder photo: ${k}">${P[k]}</svg>`}
+const dueTxt=t=>{const d=t.rep?S.m:t.due;if(d==null)return '';return d<S.m?`Was due Month ${d} · still open, no penalty`:`Due end of Month ${d}`};
+const capChip=(got,asked)=>got<asked?`<span class="chip ok">Approved · +${got} of ${asked}, monthly cap reached</span>`:`<span class="chip ok">Approved · +${got}</span>`;
+const capWarn=v=>{const r=room();return r<v?`<p class="warn">Heads up: the monthly cap means only ${r} of ${v} credits will be added.</p>`:''};
+
+/* ---------- parent screens ---------- */
+function marketCard(){const q=queued();return `<div class="card ${isOpen()?'':'calm'}"><div class="row al"><b>${isOpen()?'ASX market is open':'ASX market is closed'}</b><span class="chip ${isOpen()?'ok':'wait'}">${isOpen()?'Buys happen now':'Orders wait'}</span></div>
+ <p class="fine" style="margin-top:4px">${mktLine()}. Simulated Sydney time: ${clkTxt()}.</p>
+ ${isOpen()?'<p class="fine">Buy and sell orders are filled straight away at the current price.</p>':`<p class="fine">Orders placed now wait and are filled when the market opens.${q.length?` ${q.length} waiting.`:''}</p><button class="btn sm dash" data-act="skipopen">Skip to market open (demo)</button>`}</div>`}
+function walletCard(){const w=queuedBuy();return `<div class="card"><div class="row"><b>Wallet</b><span class="lbl">cash account at the partner</span></div>
+ <div class="kv"><div><span>Free to invest</span><b>${money(S.cash)}</b></div><div><span>Steady plan</span><b>${money(S.steadyCash)}</b></div><div><span>${w?'Waiting for open':'In orders'}</span><b>${money(w)}</b></div></div>
+ <p class="fine">The partner holds this cash, not the app.${RV()}</p>
+ <div class="two"><button class="btn pri" data-act="money" data-k="add">Add money</button><button class="btn" data-act="money" data-k="out" ${S.cash>0?'':'disabled'}>Withdraw</button></div>${moneyPanel()}</div>`}
+function moneyPanel(){const k=S.ui.money;if(!k)return '';const a=+S.ui.mAmt||0,ok=a>0&&(k==='add'||a<=S.cash);
+ return `<div class="quote" style="margin-top:10px"><label class="lbl" for="mAmt">${k==='add'?'Amount to add from your bank ($)':'Amount to withdraw to your bank ($)'}</label>
+ <input id="mAmt" type="text" inputmode="decimal" value="${esc(S.ui.mAmt)}" placeholder="0.00">
+ <div class="chips">${(k==='add'?[50,100,250,500]:[50,100]).map(v=>`<button data-act="mq" data-v="${v}" aria-pressed="${a===v}">$${v}</button>`).join('')}${k==='out'?`<button data-act="mq" data-v="${S.cash}">All ${money(S.cash)}</button>`:''}</div>
+ <p class="fine" style="margin-top:0">${k==='add'?"Paid from your bank by PayTo or bank transfer, straight to the partner. In the live app it usually arrives within minutes.":'Goes back to your own bank account.'} Simulated here.</p>
+ <div class="two"><button class="btn" data-act="moneyX">Cancel</button><button class="btn pri" data-act="moneyGo" ${ok?'':'disabled'}>${k==='add'?'Add':'Withdraw'} ${a>0?money(a):''}</button></div>${k==='out'&&a>S.cash?'<p class="warn">More than the free cash in the wallet.</p>':''}</div>`}
+function holdingRows(){return held().map(f=>{const hv=U(f.id)*S.price[f.id],pi=S.putIn[f.id];return `<button class="etfrow" data-act="etf" data-id="${f.id}" aria-label="${f.id} ${f.short}, value ${money(hv)}"><span><b>${f.id}</b><span class="lbl">${f.short}${f.id in S.core?' · milestones':''}${f.id in S.plan.split?' · steady':''}</span></span>${spark(f.id)}<span class="px">${money(hv)}<span class="lbl ${hv>=pi?'up':'down'}" style="text-align:right">${sgn(hv-pi)}</span></span></button>`}).join('')}
+function pHome(){
+ const v=val(),p=put(),g=v-p,pc=p?g/p*100:0,n=waiting().length,c=S.credits,z=Z(),hs=held();
+ const PB=[['plan3','3 months of steady plan','#2f8f5b'],['plan6','6 months of steady plan','#1f6b4f'],['pmile','First milestone','#ffc83d'],['year','First year','#6c9bb8']];
+ const passed=Object.keys(MODS).filter(id=>S.mods[id]?.passed),recent=Object.keys(MODS).filter(id=>S.mods[id]?.last).sort((a,b)=>S.mods[b].last.at-S.mods[a].last.at).slice(0,3);
+ const byCat={};hs.forEach(f=>byCat[f.cat]=(byCat[f.cat]||0)+U(f.id)*S.price[f.id]);
+ return `<h3>Mia's portfolio</h3>
+ <div class="card"><div class="lbl">Total value</div><div class="big">${money(v)}</div>
+  <div class="chg ${g>=0?'up':'down'}">${sgn(g)} (${pc>=0?'+':'−'}${Math.abs(pc).toFixed(1)}%) on ${money(p)} put in</div>
+  <div class="fig" data-chart="p"><svg aria-label="Value compared with money put in, by month"></svg></div>
+  <div class="legend"><span><span class="k" style="--c:#1f6b4f"></span>Value</span><span><span class="k dash"></span>Money put in</span></div></div>
+ <div class="card"><div class="row"><b>Holdings</b><span class="lbl">${hs.length} ETF${hs.length===1?'':'s'}</span></div>
+  ${v>0?`<div class="mix" aria-hidden="true">${Object.entries(byCat).map(([c,x])=>`<i style="width:${x/v*100}%;background:${FCAT[c].col}"></i>`).join('')}</div><div class="legend">${Object.entries(byCat).map(([c,x])=>`<span><span class="swc" style="background:${FCAT[c].col}"></span>${FCAT[c].t} ${Math.round(x/v*100)}%</span>`).join('')}</div>`:''}
+  ${holdingRows()||'<p class="fine">Nothing held yet. Go to Invest to start.</p>'}${DISC()}</div>
+ ${n?`<div class="card"><div class="row"><b>${n} waiting for you</b><button class="btn sm pri" data-act="goapp">Review</button></div></div>`:''}
+ <div class="card"><div class="row"><b>Mia's Level ${S.ladder.level} milestone</b><span class="amt">${Math.round(c)} of ${z} credits</span></div>${bar(c,z)}
+  <p class="fine">When Mia reaches it, you approve ${whole(z)} from your wallet into her milestone plan.${RV()}</p>
+  ${S.perk?`<p class="fine">Family perk at this milestone: <b>${esc(S.perk)}</b></p>`:''}
+  ${c>=z?`<button class="btn pri wide" data-act="gomile">Milestone reached: invest ${whole(z)}</button>`:''}</div>
+ <div class="card"><div class="row"><b>Mia's learning</b><span class="amt">${passed.length} of 12 modules</span></div>${bar(passed.length,12,'Modules passed','thin')}
+  ${recent.map(id=>{const m=S.mods[id];return `<div class="act row"><span>${MODS[id].t}</span><b>${m.last.score}/10 ${m.last.score>=PASS?'✓ passed':'· retake'}</b></div>`}).join('')}</div>
+ <div class="card"><b>Your consistency</b><div class="badges four" style="margin-top:10px">${PB.map(([k,nm,col])=>badge(S.pbadges[k]!=null,nm,col)).join('')}</div></div>
+ <div class="card"><b>Recent activity</b>${S.log.slice(0,6).map(a=>`<div class="act row"><span>M${a.m} · ${esc(a.w)}</span><b>${a.a?(a.a>0?'+':'−')+'$'+Math.abs(a.a).toFixed(0):''}</b></div>`).join('')}</div>`;
+}
+function pApprove(){
+ const w=waiting();
+ const capLine=S.cap>0?`<p class="fine" style="margin-top:0">Earned this month: ${whole(S.earned)} of your ${whole(S.cap)} cap. ${room()} left.</p>`:'<p class="fine" style="margin-top:0">No monthly cap set.</p>';
+ return `<h3>Approvals</h3>${capLine}
+ ${w.map(({k,o})=>{
+  if(k==='task'){const ci=o.proof==='checkin';return `<div class="card"><div class="row"><b>${esc(o.t)}</b><span class="chip">${o.v} credits</span></div><div class="lbl">Task · proof: ${PROOF[o.proof]}</div>
+   ${o.photo?`<div class="thumb">${photo(o.photo)}</div>`:''}${o.note?`<div class="quote">“${esc(o.note)}”</div>`:''}${ci?'<p class="fine">You said you would check this one in person.</p>':''}${capWarn(o.v)}
+   ${S.ui.ny==o.id?`<p class="fine">Pick a short reason Mia will see:</p><div class="row wrap">${['Nearly there, finish it off',"Let's chat about it",'Have another go this month'].map(r=>`<button class="btn sm" data-act="nyr" data-id="${o.id}" data-r="${r}">${r}</button>`).join('')}</div>`
+   :`<div class="two"><button class="btn pri" data-act="approve" data-id="${o.id}">${ci?'Checked, approve':'Approve'}</button><button class="btn" data-act="notyet" data-id="${o.id}">Not yet</button></div>`}</div>`}
+  if(k==='mod'){const m=S.mods[o.id];return `<div class="card"><div class="row"><b>Module: ${o.t}</b><span class="chip">${o.v} credits</span></div><div class="lbl">${o.cat.t} · passed ${m.last.score}/10</div>${capWarn(o.v)}<button class="btn pri wide" data-act="approveMod" data-id="${o.id}">Approve</button></div>`}
+  if(k==='shout')return `<div class="card"><b>Shout-out from Mia</b><div class="quote">“${esc(o.text)}”</div><p class="fine">You choose the reward, or just say thanks.</p>${room()<10?`<p class="warn">Heads up: only ${room()} credits are left under this month's cap.</p>`:''}<div class="row wrap" style="margin-top:8px">${[2,5,10].map(a=>`<button class="btn sm" data-act="give" data-id="${o.id}" data-a="${a}">+${a}</button>`).join('')}<button class="btn sm" data-act="give" data-id="${o.id}" data-a="0">Thank you only</button><button class="btn sm" data-act="shoutno" data-id="${o.id}">Not this time</button></div></div>`;
+  const ed=S.ui.editSug==o.id;
+  return `<div class="card"><div class="row"><b>Task idea from Mia</b><span class="chip">asks ${o.v} credits</span></div><div class="quote">“${esc(o.t)}”</div>
+   ${ed?`<div class="two"><input type="text" id="esT" value="${esc(S.ui.esT)}" aria-label="Task name"><input type="number" id="esV" min="0" value="${esc(S.ui.esV)}" aria-label="Credits"></div><div class="two"><button class="btn" data-act="sugCancel" data-id="${o.id}">Cancel</button><button class="btn pri" data-act="sugSave" data-id="${o.id}">Save and accept</button></div>`
+   :`<div class="row wrap" style="margin-top:8px"><button class="btn sm pri" data-act="sugOk" data-id="${o.id}">Accept</button><button class="btn sm" data-act="sugEdit" data-id="${o.id}">Edit and accept</button><button class="btn sm" data-act="sugNo" data-id="${o.id}">Decline</button></div>`}</div>`;
+ }).join('')||'<div class="card lock"><b>All caught up.</b><p class="fine">Tasks, shout-outs, task ideas and (if you turn off automatic module credits) passed modules show up here.</p></div>'}`;
+}
+function pPlan(){
+ const gd=growData(),end=gd[gd.length-1],gv=S.ui.grow??perMonth();
+ return `<h3>Family settings</h3>
+ <div class="card"><b>Mia's milestones</b><p class="fine" style="margin-top:2px">Milestones are for Mia. Each level needs as many credits as the milestone amount you set (now ${whole(Z())}, at least $100). When she reaches one, you approve that amount from your wallet into her milestone plan, and she unlocks a new learning topic. Your steady plan and Invest now are separate.${RV()}</p>
+  ${S.miles.length?`<div style="margin-top:6px">${S.miles.map(m=>`<div class="act row"><span>Level ${m.level} (${m.total} credits) · Month ${m.m}${m.perk?' · '+esc(m.perk):''}</span><b>${money(m.amt)}</b></div>`).join('')}</div>`:''}
+  <button class="btn wide" data-act="gomile">Milestone amount and plan</button></div>
+ <div class="card"><label class="lbl" for="perk">Family perk for the Level ${S.ladder.level} milestone (lives outside the app)</label><input id="perk" type="text" value="${esc(S.perk)}" data-set="perk" placeholder="For example, movie night"></div>
+ <div class="card"><label class="lbl" for="cap">Monthly cap on earned credits (tasks, modules, shout-outs)</label><input id="cap" type="number" min="0" step="5" value="${S.cap||''}" data-set="cap" placeholder="No cap"><p class="fine">Used this month: ${whole(S.earned)}. Blank means no cap.</p></div>
+ <div class="card"><div class="row"><div><b>Module credits added automatically</b><p class="fine" style="margin-top:2px">On: Mia gets 3 credits as soon as she passes a module (8 out of 10). Off: you approve each one.</p></div>${sw('autoMod',S.autoMod,'Module credits added automatically')}</div></div>
+ <div class="card"><div class="row"><div><b>Show Mia real dollar values</b><p class="fine" style="margin-top:2px">Off by default. Mia sees credits, her garden and her progress.</p></div>${sw('showReal',S.showReal,'Show Mia real dollar values')}</div></div>
+ <div class="card"><b>Tasks</b><p class="fine">Suggested: 5 to 15 credits for chores. A suggestion, not a rule.</p>
+  ${S.tasks.map(t=>`<div class="trow"><div class="row"><span>${esc(t.t)}</span><span class="lbl">${t.rep?'repeats':'one-off'}</span></div><div class="two"><input id="tv${t.id}" type="number" min="0" value="${t.v}" data-set="tv" data-id="${t.id}" aria-label="Credits for ${esc(t.t)}"><select id="tp${t.id}" data-set="tp" data-id="${t.id}" aria-label="Proof for ${esc(t.t)}">${Object.entries(PROOF).map(([k,n])=>`<option value="${k}" ${t.proof===k?'selected':''}>${n}</option>`).join('')}</select></div></div>`).join('')}
+  <div class="two" style="margin-top:12px"><input id="newT" type="text" placeholder="New task" value="${esc(S.ui.newT)}" aria-label="New task name"><input id="newV" type="number" min="0" placeholder="Credits" value="${esc(S.ui.newV)}" aria-label="Credits for new task"></div>
+  <button class="btn wide" data-act="addtask">Add repeating task</button></div>
+ <div class="card"><b>Growth to age 18: an illustration</b><p class="fine" style="margin-top:2px">Assumed return: 5% a year after fees, fixed for this illustration. Real returns go up and down.${RV()}</p>
+  <label class="lbl" for="grow" style="display:block;margin-top:10px">Monthly contribution: <b>${whole(gv)}</b></label><input id="grow" type="range" min="0" max="300" step="5" value="${gv}" data-set="grow">
+  <div class="fig tall" data-chart="g"><svg aria-label="Illustration of growth to age 18 based on an assumed return, not a prediction"></svg></div>
+  <div class="legend"><span><span class="k" style="--c:#1f6b4f"></span>Illustrated value about ${whole(end.v)}</span><span><span class="k dash"></span>Put in ${whole(end.p)}</span></div></div>`;
+}
+const fundInfo=f=>`<p class="fine"><b>What it holds:</b> ${f.holds}<br><b>What it's for:</b> ${FCAT[f.cat].purpose}<br><b>Ups and downs:</b> ${FCAT[f.cat].moves}<br><b>Fee:</b> ${f.fee.toFixed(2)}% a year (made up)<br>${meter(f)}</p>
+ <p class="fine"><span class="link">Product Disclosure Statement</span> · <span class="link">Target Market Determination</span><br>In the live app these open the fund's own documents.</p>`;
+const chgTxt=x=>`${x>=0?'▲ +':'▼ −'}${Math.abs(x*100).toFixed(1)}%`;
+function editor(k){const E=S.ui[k==='core'?'edit':'sedit'],ids=Object.keys(E),sum=ids.reduce((a,id)=>a+E[id],0),chk=S.ui[k==='core'?'pchk':'schk'],ok=ids.length&&sum===100&&ids.every(id=>E[id]>0)&&chk;
+ const amt=k==='core'?Z():S.plan.auto,bad=ids.filter(id=>E[id]>0&&amt*E[id]/100<S.rules.min);
+ return `<div class="quote"><b id="${k}H" tabindex="-1">${k==='core'?'Milestone plan':'Steady plan ETFs'}</b>
+  <p class="fine">${k==='core'?`Every ${whole(Z())} milestone buys this same mix.`+" A plan works best when it stays the same for years. Changes apply to future milestones only; nothing already invested is sold.":'Each automatic buy is split across these ETFs.'}${RV()}</p>
+  ${ids.map(id=>{const f=FUND[id],a=E[id];return `<div class="alloc"><div class="row al"><div><b>${f.short}</b><div class="lbl">${f.id} · ${FCAT[f.cat].t}</div></div><span class="amt">${a}% · ${money(amt*a/100)}</span></div>
+   <div class="row" style="margin-top:6px"><button class="btn sq" data-act="pstep" data-k="${k}" data-id="${id}" data-d="-10" aria-label="Less ${f.short}" ${a<=0?'disabled':''}>−</button><div class="abar" aria-hidden="true"><i style="width:${a}%;background:${FCAT[f.cat].col}"></i></div><span class="pc">${a}%</span><button class="btn sq" data-act="pstep" data-k="${k}" data-id="${id}" data-d="10" aria-label="More ${f.short}" ${a>=100?'disabled':''}>+</button></div>
+   <button class="btn ghost sm" data-act="prm" data-k="${k}" data-id="${id}">Remove</button></div>`}).join('')||'<p class="warn">No ETFs yet. Add one below.</p>'}
+  <div class="two"><select id="add-${k}" aria-label="ETF to add">${FUNDS.filter(f=>!(f.id in E)).map(f=>`<option value="${f.id}" ${S.ui['add'+k]===f.id?'selected':''}>${f.id} · ${f.short}</option>`).join('')}</select><button class="btn" data-act="padd" data-k="${k}">Add ETF</button></div>
+  <div class="row trow"><span>Total</span><b>${sum===100?'✓ 100%':sum+'% (must be 100%)'}</b></div>
+  ${bad.length?`<p class="warn">${bad.join(', ')} would be under the partner's ${whole(S.rules.min)} minimum per order line. Use fewer ETFs or larger shares.</p>`:''}
+  <label class="chk"><input type="checkbox" id="${k}chk" data-set="${k==='core'?'pchk':'schk'}" ${chk?'checked':''}>I understand this is general information, not advice.</label>
+  <div class="two"><button class="btn" data-act="pcancel" data-k="${k}">Cancel</button><button class="btn pri" data-act="psave" data-k="${k}" ${ok&&!bad.length?'':'disabled'}>Save</button></div></div>`}
+function steadyPanel(){const p=S.plan,pm=perMonth(),left=Math.max(0,p.auto-S.steadyCash),mo=pm?Math.ceil(left/pm):null;
+ const b=Object.keys(p.split).filter(id=>p.auto*p.split[id]/100<S.rules.min);
+ return `<div class="row"><b>Steady plan</b>${sw('planOn',p.on,'Steady plan on')}</div>
+  <p class="fine" style="margin-top:2px">PayTo collects a regular amount from your bank into the wallet. When it reaches the auto-invest amount you choose, it is invested in your steady plan ETFs automatically. No cap, and separate from Mia's milestones.${RV()}</p>
+  <div class="two"><div><label class="lbl" for="pamt">Collect ($)</label><input id="pamt" type="number" min="0" step="1" value="${p.amt}" data-set="planAmt"></div><div><label class="lbl" for="pfreq">How often</label><select id="pfreq" data-set="planFreq">${['weekly','fortnightly','monthly'].map(f=>`<option ${p.freq===f?'selected':''}>${f}</option>`).join('')}</select></div></div>
+  <label class="lbl" for="pauto" style="display:block;margin-top:8px">Auto-invest when it reaches ($, at least 100)</label><input id="pauto" type="number" min="100" step="10" value="${p.auto}" data-set="planAuto">
+  <div class="kv"><div><span>Per month</span><b>${whole(pm)}</b></div><div><span>Built up</span><b>${money(S.steadyCash)}</b></div><div><span>Next invest</span><b>${!p.on||p.paused?'paused':left<=0?'now':'~'+mo+' mo'}</b></div></div>
+  ${bar(S.steadyCash,p.auto,'Steady plan money built up','thin')}
+  ${b.length?`<p class="warn">At ${whole(p.auto)}, ${b.join(', ')} would be under the partner's ${whole(S.rules.min)} minimum per ETF. Raise the auto-invest amount or use fewer ETFs.</p>`:''}
+  ${S.ui.sedit?editor('steady'):`<div style="margin-top:10px">${Object.keys(p.split).map(id=>`<div class="row trow"><span>${FUND[id].short} <span class="lbl">${id}</span></span><b class="amt">${p.split[id]}%</b></div>`).join('')}</div><button class="btn sm dash" data-act="sedit">Change steady plan ETFs</button>`}
+  <div class="two"><button class="btn" data-act="skip">${p.skip?'Skipping next month':'Skip next month'}</button><button class="btn" data-act="pause">${p.paused?'Resume':'Pause'}</button></div>`}
+function milePanel(){const c=S.credits,z=Z(),chk=mileCheck(),ok=c>=z&&!chk&&S.ui.und;
+ let h=`<b>Mia's milestones</b><p class="fine" style="margin-top:2px">Milestones keep Mia learning. Each level needs as many credits as the milestone amount, and invests that amount from your wallet into the milestone plan. Her next level is at ${mileNext()} credits in total.${RV()}</p>
+  <label class="lbl" for="msize" style="display:block;margin-top:8px">Milestone amount for each level ($, at least 100)</label><input id="msize" type="number" min="100" max="1000" step="10" value="${z}" data-set="msize">
+  <div class="row" style="margin-top:8px"><span>Level ${S.ladder.level}</span><b class="amt">${Math.round(c)} of ${z} credits</b></div>${bar(c,z)}`;
+ h+=S.ui.edit?editor('core'):`<div style="margin-top:10px">${Object.keys(S.core).map(id=>`<div class="row trow"><span>${FUND[id].short} <span class="lbl">${id}</span></span><b class="amt">${S.core[id]}% · ${money(z*S.core[id]/100)}</b></div>`).join('')}</div><button class="btn sm dash" data-act="editPlan">Change milestone plan</button>`;
+ if(c>=z&&!S.ui.edit)h+=`<div class="quote" style="margin-top:12px"><b>Level ${S.ladder.level} reached: invest ${whole(z)}</b><ul class="fine"><li>${whole(z)} comes from your wallet (${money(S.cash)} free).</li><li>${isOpen()?"It is bought straight away at the current price.":`The market is closed, so it is bought when the ASX opens (${opensTxt()}).`}</li><li>Values can fall as well as rise.</li></ul>
+  ${chk?`<p class="warn">${chk}</p>${S.cash<z?'<button class="btn sm" data-act="money" data-k="add">Add money</button>':''}`:''}
+  <label class="chk"><input type="checkbox" id="und" data-set="und" ${S.ui.und?'checked':''}>I understand this is general information, not advice.</label>
+  <button class="btn pri wide" id="p-approve-invest" data-act="approveInvest" ${ok?'':'disabled'}>Approve ${whole(z)}</button></div>`;
+ return h}
+function marketList(){
+ const q=S.ui.q.trim().toLowerCase();
+ let list=FUNDS.filter(f=>(S.ui.qcat==='all'||f.cat===S.ui.qcat)&&(!q||(f.name+' '+f.id+' '+FCAT[f.cat].t+' '+f.holds).toLowerCase().includes(q)));
+ const srt={code:(a,b)=>a.id.localeCompare(b.id),name:(a,b)=>a.name.localeCompare(b.name),fee:(a,b)=>a.fee-b.fee,risk:(a,b)=>a.sd-b.sd}[S.ui.qsort];list=list.slice().sort(srt);
+ return `<span class="sec">ASX-listed ETFs${RV()}</span><div class="card">
+  <label class="lbl" for="q">Search by code, name or what it holds</label><input id="q" type="search" value="${esc(S.ui.q)}" placeholder="For example EX08, global, bonds" autocomplete="off">
+  <div class="chips" role="group" aria-label="Category"><button data-act="qcat" data-c="all" aria-pressed="${S.ui.qcat==='all'}">All</button>${Object.entries(FCAT).map(([k,c])=>`<button data-act="qcat" data-c="${k}" aria-pressed="${S.ui.qcat===k}">${c.t}</button>`).join('')}</div>
+  <div class="row"><span class="lbl" role="status">${list.length} of ${FUNDS.length} example ETFs</span><label class="lbl" for="qsort" style="display:flex;gap:6px;align-items:center">Sort<select id="qsort" data-set="qsort" style="width:auto">${[['code','Code'],['name','Name'],['fee','Lowest fee'],['risk','Lowest risk']].map(([v,n])=>`<option value="${v}" ${S.ui.qsort===v?'selected':''}>${n}</option>`).join('')}</select></label></div>
+  ${list.map(f=>{const c1=chgOver(f.id,1);return `<button class="etfrow" data-act="etf" data-id="${f.id}" aria-label="${f.id} ${f.name}, ${money(S.price[f.id])}"><span><b>${f.id}${U(f.id)>0?' <span class="chip ok" style="font-size:12px">held</span>':''}</b><span class="lbl">${f.short} · ${f.fee.toFixed(2)}%</span></span>${spark(f.id)}<span class="px">${money(S.price[f.id])}<span class="lbl" style="text-align:right">${chgTxt(c1)} 1M</span></span></button>`}).join('')||'<p class="fine">No ETFs match. Try another word or category.</p>'}
+  <p class="fine">Prices, fees and codes are made up. In the live app this is the partner's full list of ASX ETFs, with end-of-day prices. Sorting is not a ranking or a recommendation.</p></div>`}
+function lifecycle(o){const next=o.st==='queued'?[o.side==='buy'?'Bought at market open':'Sold at market open']:[];
+ return `<ol class="steps" aria-label="Order steps">${o.steps.map(x=>`<li class="${x.s==='Cancelled'?'x':'on'}"><span>${x.s}${x.note?`<span class="note">${esc(x.note)}</span>`:''}</span><span>${x.at}</span></li>`).join('')}${next.map(x=>`<li><span>${x}</span><span>in <span class="cd">${countdown()}</span></span></li>`).join('')}</ol>`}
+const oTitle=o=>`${KIND[o.kind]}${o.level?' · Level '+o.level:''} · ${o.side==='sell'?Object.keys(o.parts)[0]:Object.keys(o.parts).join(', ')}`;
+function etfDetail(id){const f=FUND[id],u=U(id),hv=u*S.price[id],pi=S.putIn[id]||0,side=u>0?S.ui.side:'buy',isB=side==='buy';
+ const raw=isB?S.ui.buyAmt:S.ui.sellAmt,a=+raw||0,mx=isB?S.cash:hv;
+ const err=a<=0?'Enter an amount.':isB&&a<S.rules.min?`The partner's minimum order is ${whole(S.rules.min)}.`:isB&&a>S.cash?`The wallet has ${money(S.cash)} free.`:!isB&&a>hv+.005?`You hold about ${money(hv)}.`:'',ok=!err&&S.ui.ochk;
+ return `<button class="btn ghost sm" data-act="etfback">← ${S.ui.from==="home"?"Portfolio":"Invest"}</button><p class="fine" style="margin:0">${mktLine()}</p>
+ <h3 id="etfH" tabindex="-1" style="margin-top:4px">${f.name}</h3><div class="lbl">${f.id} · ${FCAT[f.cat].t} · ${meter(f)}</div>
+ <div class="card" style="margin-top:10px"><div class="big">${money(S.price[id])}</div><div class="chg" style="white-space:normal">${chgTxt(chgOver(id,1))} this month · ${chgTxt(chgOver(id,12))} over 12 months</div>
+  <div class="seg two-up" style="margin-top:10px" role="group" aria-label="Chart range"><button data-act="range" data-v="12" aria-pressed="${S.ui.range===12}">1 year</button><button data-act="range" data-v="all" aria-pressed="${S.ui.range==='all'}">All</button></div>
+  <div class="fig" data-chart="e"><svg aria-label="Unit price of ${f.id} by month (made up)"></svg></div>
+  <p class="fine">Made-up prices. Past performance is not a reliable indicator of future performance.</p></div>
+ ${u>0?`<div class="card"><b>Your holding</b><div class="kv"><div><span>Units</span><b>${u.toFixed(3)}</b></div><div><span>Value</span><b>${money(hv)}</b></div><div><span>Change</span><b class="${hv>=pi?'up':'down'}">${sgn(hv-pi).replace('$','$')}</b></div></div></div>`:''}
+ <div class="card">${u>0?`<div class="seg two-up" role="group" aria-label="Buy or sell"><button data-act="side" data-v="buy" aria-pressed="${isB}">Buy</button><button data-act="side" data-v="sell" aria-pressed="${!isB}">Sell</button></div>`:'<b>Buy</b>'}
+  <label class="lbl" for="${isB?'buyAmt':'sellAmt'}" style="display:block;margin-top:8px">Amount ($)</label><input id="${isB?'buyAmt':'sellAmt'}" type="text" inputmode="decimal" value="${esc(raw)}" placeholder="0.00">
+  <div class="chips">${(isB?[S.rules.min,100,250]:[50,100]).filter((v,i,x)=>x.indexOf(v)===i).map(v=>`<button data-act="amt" data-v="${v}" aria-pressed="${a===v}">$${v}</button>`).join('')}<button data-act="amt" data-v="${cr(mx)}">${isB?'All cash':'Sell all'} ${money(mx)}</button></div>
+  <p class="fine" style="margin-top:0">${a>0?`About ${(a/S.price[id]).toFixed(3)} units at today's price. `:''}${isB?`Free cash in wallet: ${money(S.cash)}. Partner minimum: ${whole(S.rules.min)}. Part units allowed.`:'The money goes back to your wallet once it is sold.'} ${isOpen()?'The market is open, so this is filled straight away at the current price.':`The market is closed. The order waits and is filled when the ASX opens (${opensTxt()}).`}</p>
+  ${isB&&a>S.cash?'<button class="btn sm" data-act="money" data-k="add">Add money to wallet</button>':''}${!isB?`<p class="fine">Selling can create a capital gain or loss for tax. Check with a registered tax agent.${RV()}</p>`:''}
+  ${S.ui.money&&isB?moneyPanel():''}
+  <label class="chk"><input type="checkbox" id="ochk" data-set="ochk" ${S.ui.ochk?'checked':''}>I understand this is general information, not advice.</label>
+  <button class="btn pri wide" data-act="${isB?'buy':'sell'}" data-id="${id}" ${ok?'':'disabled'}>${isOpen()?(isB?'Buy now':'Sell now'):(isB?'Buy at market open':'Sell at market open')} ${a>0?money(a):''}</button>
+  <p class="fine">${err&&raw!==''?err:!S.ui.ochk?'Tick the box to place the order.':''}</p></div>
+ <button class="btn wide dash" data-act="addSteady" data-id="${id}" ${id in S.plan.split?'disabled':''}>${id in S.plan.split?'In your steady plan':'Add to steady plan'}</button>
+ <div class="card" style="margin-top:12px"><b>Key facts</b>${fundInfo(f)}${DISC()}</div>`}
+function pInvest(){
+ if(S.ui.etf)return etfDetail(S.ui.etf);
+ const q=queued(),w=S.ui.way,hist=S.orders.filter(o=>o.st!=='queued').slice(0,8);
+ return `<h3>Invest</h3>
+ ${marketCard()}
+ ${walletCard()}
+ <div class="card"><b>Ways to invest</b><div class="seg" role="group" aria-label="Ways to invest" style="margin-top:8px">${[['now','Invest now'],['steady','Steady plan'],['mile','Milestones']].map(([k,n])=>`<button data-act="way" data-v="${k}" aria-pressed="${w===k}">${n}${k==='mile'&&S.credits>=Z()?' !':''}</button>`).join('')}</div>
+  ${w==='now'?`<p class="fine" style="margin-top:0"><b>Invest now:</b> add money to the wallet, then tap any ETF below and choose Buy. Any amount from the partner's minimum (${whole(S.rules.min)}). On a trading day between 10 am and 4 pm it is bought straight away; otherwise it waits for the market to open.${RV()}</p>`:w==='steady'?steadyPanel():milePanel()}</div>
+ ${q.length?`<div class="card calm"><b>Waiting for the market to open</b>${q.map(o=>`<div class="act"><div class="row al"><span>${oTitle(o)}</span><b class="amt">${money(o.amt)}</b></div>${lifecycle(o)}${o.kind!=='mile'?`<button class="btn sm" data-act="ocancel" data-id="${o.id}">Cancel order</button>`:''}</div>`).join('')}</div>`:''}
+ ${marketList()}
+ ${hist.length?`<span class="sec">Order history</span>${hist.map(o=>`<div class="card"><div class="row al"><b>${oTitle(o)}</b><span class="chip ${o.st==='cancelled'?'no':'ok'}">${o.st==='cancelled'?'Cancelled':o.side==='sell'?'Sold':'Bought'}</span></div><div class="lbl">${money(o.amt)}</div>${lifecycle(o)}</div>`).join('')}`:''}`;
+}
+function pLog(){
+ return `<h3>Approval log</h3><p class="fine" style="margin-top:0">Read-only. Every decision about credits or money, newest first. In the live app this is stored on the server and can't be edited.</p>
+ <div class="card">${S.audit.map(a=>`<div class="act"><div class="row al"><b style="white-space:normal">${esc(a.what)}</b><span class="amt">${a.amt?money(a.amt):'—'}</span></div><div class="lbl">${esc(a.dec)} · by ${esc(a.by)} · ${a.at}</div></div>`).join('')}</div>${DISC()}`;
+}
+const sheet=()=>{const z=Z(),r=splitParts(S.core,z);
+ return `<div class="sheet"><div role="dialog" aria-modal="true" aria-labelledby="shT"><h4 id="shT">Invest ${whole(z)} for Mia's Level ${S.ladder.level} milestone?</h4><p class="fine">${whole(z)} comes from your wallet. ${isOpen()?'It is bought straight away at the current price.':`The market is closed, so it is bought when the ASX opens (${opensTxt()}).`} Your approval is recorded. In this prototype nothing real happens.${RV()}</p>
+ <ul class="fine">${Object.keys(r.parts).map(id=>`<li>${FUND[id].short} (${id}): ${money(r.parts[id].spend)} (${S.core[id]}%)</li>`).join('')}</ul>
+ <div class="two"><button class="btn" id="sh-back" data-act="cancel">Back</button><button class="btn pri" id="sh-ok" data-act="confirm">Confirm</button></div></div></div>`};
+
+/* ---------- teen screens ---------- */
+const realCard=()=>{const v=val(),p=put();return `<div class="card"><div class="lbl">Real value, shared by Sam</div><div class="big">${money(v)}</div><div class="chg ${v>=p?'up':'down'}">${sgn(v-p)} on ${money(p)} put in</div><p class="fine">Values go up and down. The garden only counts what's planted and how long it's held.</p></div>`};
+const nextLocked=()=>LC.find(c=>!catUnlocked(c));
+function progressCard(){
+ const c=S.credits,z=Z(),reached=c>=z,nl=nextLocked(),mq=queued().some(o=>o.kind==='mile');
+ return `<div class="card"><div class="row"><b>${Math.round(mileTotal())} of ${mileNext()} credits</b><span class="lbl">Level ${S.ladder.level}</span></div>${bar(c,z)}
+  <p class="fine">Your milestones: ${[0,1,2].map(i=>mileNext()+i*z).join(', ')} credits and on. ${nl?`The next one unlocks a new learning topic: <b>${nl.t}</b>.`:'Every learning topic is unlocked.'}</p>
+  ${S.perk?`<p class="fine">${reached?`<b>Perk unlocked: ${esc(S.perk)}!</b> Enjoy it with Sam.`:`Family perk at this milestone: <b>${esc(S.perk)}</b>`}</p>`:''}
+  ${CREDITS_COPY()}
+  ${mq?'<p class="fine"><b>Your plants are about to grow.</b> Sam approved your milestone. It is planted when the market opens.</p>':''}${reached?'<p class="fine"><b>Milestone reached!</b> Sam will review and approve it.</p>':''}</div>`
+}
+function cmpText(at){
+ if(at>=S.m)return 'Drag the slider back to see how your garden looked in an earlier month.';
+ const pt=heldCats(at).length,pn=heldCats().length,dt=ordersBy(at).length,dn=ordersBy(S.m).length,gt=heldCats(at).reduce((a,c)=>a+stgAt(c,at)+1,0),gn=heldCats().reduce((a,c)=>a+stg(c)+1,0),mo=S.m-at;
+ return `<b>Month ${at} → now (${mo} month${mo===1?'':'s'} later):</b> ${dn-dt} more deposit${dn-dt===1?'':'s'}, ${gn-gt} more growth step${gn-gt===1?'':'s'}${pn>pt?`, ${pn-pt} new kind${pn-pt===1?'':'s'} of plant`:''}. Your garden grows with deposits and time, whatever the weather was.`;
+}
+function tGarden(){
+ const due=S.tasks.filter(t=>t.st==='open'&&(t.rep||t.due<=S.m)).length,nm=Object.values(MODS).find(M=>catUnlocked(M.cat)&&!MS(M.id).passed),cats=heldCats(),at=S.ui.gAt??S.m,w=wxAt(S.m);
+ return `<h3>Mia's garden</h3><div class="today" aria-label="Today"><span>${due} task${due===1?'':'s'} due</span><span>${nm?'Next module: '+nm.t:'Modules: all caught up'}</span><span>${Math.round(S.credits)}/${S.ladder.target} to Level ${S.ladder.level}</span></div>
+ ${at<S.m?`<div class="row" style="margin-bottom:6px"><span class="chip wait">Looking back: Month ${at}</span><button class="btn sm" data-act="gnow">Back to now</button></div>`:''}
+ <div class="garden" id="gardenBox">${garden(at)}</div>
+ <div class="card"><label class="lbl" for="gAt" style="display:block">Garden over time: <b id="gAtL">${at<S.m?'Month '+at:'Now (Month '+S.m+')'}</b></label>
+  <input id="gAt" type="range" min="0" max="${S.m}" step="1" value="${at}" aria-valuetext="${at<S.m?'Month '+at:'Now'}">
+  <p class="fine" id="gCmp">${cmpText(at)}</p></div>
+ <div class="card ${w==='cloud'||w==='rain'?'calm':''}"><div class="row al"><b>This month's garden weather</b><span class="wxi">${wxIcon(w)}</span></div>
+  <p class="fine" style="margin-top:2px">${S.dip?"Markets dipped this month. Dips happen to every investor, and patient investors stay put. Hold on to earn the Held Through a Dip badge.":w==='sun'?'Sunny skies: prices rose a little this month. Sunny spells come and go too.':w==='part'?'Mostly sunny: prices barely moved this month.':w==='cloud'?'Cloudy skies: prices dipped a little this month. Clouds pass.':'Rainy skies: prices fell more than usual this month.'} The weather changes; your plants don't shrink. The garden counts deposits and time, not daily prices.${RV()}</p>
+  ${cats.length?insights():'<p class="fine">Once something is planted, you will see the weather for each kind of ETF here.</p>'}
+  ${cats.length?'<p class="fine">Example market notes, made up for this demo. In the live app these would be short, checked summaries.</p>':''}${DISC()}</div>
+ ${progressCard()}
+ <div class="card"><b>What's growing</b>${cats.map(c=>{const C=FCAT[c],fs=held().filter(f=>f.cat===c);return `<div class="leg"><div class="row al"><span><span class="swc" style="background:${C.col}" aria-hidden="true"></span>${C.plant}, growth step ${stg(c)+1}</span><span class="lbl">${C.t}</span></div><div class="lbl" style="padding-left:20px">${fs.map(f=>f.short).join(', ')}</div></div>`}).join('')||'<p class="fine">Nothing planted yet.</p>'}
+  <p class="fine">One plant for each kind of ETF your family holds. Each grows a step with every deposit and every two months it stays planted. Finished learning topics add things to the garden.</p>${DISC()}</div>
+ ${S.showReal?realCard():''}`;
+}
+function proofUI(t){
+ if(t.proof==='photo')return `<p class="fine">Pick a photo (placeholder images for this demo):</p><div class="thumbs">${['car','lawn','plate','book'].map(k=>`<button data-act="photo" data-k="${k}" aria-pressed="${S.ui.photo===k}" aria-label="Photo: ${k}">${photo(k)}</button>`).join('')}</div>`;
+ if(t.proof==='note')return `<label class="lbl" for="noteTxt" style="display:block;margin-top:10px">Tell Sam what you did</label><input id="noteTxt" type="text" value="${esc(S.ui.note)}" placeholder="I…">`;
+ if(t.proof==='checkin')return '<p class="fine">Sam will check this one in person.</p>';
+ return '';
+}
+function tTasks(){
+ const left=S.shoutLimit-S.shoutUsed;
+ return `<h3>Tasks</h3>${S.tasks.map(t=>{
+  let b=`<div class="card"><div class="row"><b>${esc(t.t)}</b><span class="chip">+${t.v}</span></div><div class="lbl">${esc(t.cat)} · ${t.rep?'repeats monthly':'one-off'} · proof: ${PROOF[t.proof]}</div>`;
+  if(t.st==='open'){const dt=dueTxt(t);b+=dt?`<div class="lbl">${dt}</div>`:'';
+   b+=S.ui.doing===t.id?proofUI(t)+`<div class="two"><button class="btn" data-act="cancelDo">Cancel</button><button class="btn pri" data-act="send" data-id="${t.id}" ${t.proof==='photo'&&!S.ui.photo?'disabled':''}>Send to Sam</button></div>`:`<button class="btn pri wide" data-act="done" data-id="${t.id}">Mark as done</button>`}
+  else if(t.st==='submitted')b+=`<div style="margin-top:8px"><span class="chip wait">Waiting for Sam</span></div>`;
+  else if(t.st==='approved')b+=`<div style="margin-top:8px">${capChip(t.got,t.asked)}</div>`;
+  else b+=`<div style="margin-top:8px"><span class="chip no">Not yet</span></div><div class="quote">Sam: ${esc(t.reason)}</div><p class="fine">Nothing is lost. Have another go whenever you're ready.</p><button class="btn pri wide" data-act="retry" data-id="${t.id}">Try again</button>`;
+  return b+'</div>'}).join('')}
+ <span class="sec">Suggest a task</span>
+ <div class="card"><label class="lbl" for="sugT">Got an idea for a task? Sam decides.</label><input id="sugT" type="text" value="${esc(S.ui.sugT)}" placeholder="Wash the dog" style="margin-top:6px">
+  <label class="lbl" for="sugV" style="display:block;margin-top:8px">Credits you'd suggest</label><input id="sugV" type="number" min="0" value="${esc(S.ui.sugV)}" placeholder="8">
+  <button class="btn pri wide" data-act="sugSend">Send idea</button>
+  ${S.sugg.map(s=>`<div class="act"><div class="row"><span>${esc(s.final?s.final.t:s.t)}</span>${s.st==='accepted'?`<span class="chip ok">Added · ${s.final.v} credits</span>`:s.st==='declined'?'<span class="chip">Not this time</span>':'<span class="chip wait">Waiting</span>'}</div>${s.st==='declined'?"<p class=\"fine\">Sam: Thanks for the idea. Let's keep it for another time.</p>":''}</div>`).join('')}</div>
+ <span class="sec">Shout-outs</span>
+ <div class="card"><label class="lbl" for="shoutTxt">Did something good on your own? Tell Sam.</label><input id="shoutTxt" type="text" placeholder="I helped…" value="${esc(S.ui.shout)}" style="margin-top:6px">
+  <button class="btn pri wide" data-act="shoutSend" ${left>0?'':'disabled'}>Send shout-out</button><p class="fine">${left>0?`${left} left this month.`:"That's this month's shout-outs. More next month."}</p></div>
+ ${S.shout.map(s=>`<div class="card"><div class="quote" style="margin:0">“${esc(s.text)}”</div><div style="margin-top:8px">${s.st==='given'?`<span class="chip ok">Sam added ${s.amt}${s.amt<s.asked?` of ${s.asked} credits, monthly cap reached`:' credits'}</span>`:s.st==='thanks'?`<span class="chip ok">Sam said thanks${s.capped?' (cap reached)':''}</span>`:s.st==='notnow'?'<span class="chip">Not this time</span>':'<span class="chip wait">Waiting for Sam</span>'}</div>${s.st==='notnow'?'<p class="fine">Sam: Thanks for telling me. Not this time, but keep it up.</p>':''}</div>`).join('')}`;
+}
+function modChip(id){const m=MS(id),M=MODS[id];
+ if(m.quiz)return `<span class="chip wait">In progress · question ${m.quiz.i+1} of 10</span>`;
+ if(m.passed)return m.cred==='waiting'?`<span class="chip wait">Passed ${m.best}/10 · waiting for Sam</span>`:`<span class="chip ok">✓ Passed ${m.best}/10 · +${m.got}${m.got<M.v?` of ${M.v}, cap reached`:''}</span>`;
+ if(m.attempts)return `<span class="chip no">Retake needed · best ${m.best}/10</span>`;
+ return '<span class="chip">Not started</span>';}
+function tLearnHome(){
+ const all=Object.keys(MODS),passed=all.filter(id=>S.mods[id]?.passed).length,doing=all.filter(id=>S.mods[id]?.quiz||(S.mods[id]?.attempts&&!S.mods[id]?.passed)).length,earned=all.reduce((a,id)=>a+(S.mods[id]?.cred==='given'?S.mods[id].got:0),0);
+ return `<h3>My learning</h3>
+ <div class="stats"><div><b>${passed}/12</b><span>modules passed</span></div><div><b>${doing}</b><span>in progress</span></div><div><b>${earned}</b><span>credits earned</span></div></div>
+ <p class="fine" style="margin-top:0">Each module has key points and a 10-question quiz. Score 8 or more to pass and earn 3 credits. A new topic unlocks at each milestone level.</p>
+ ${LC.map(c=>{const open=catUnlocked(c),n=c.mods.filter(id=>S.mods[id]?.passed).length;
+  return `<div class="card ${open?'':'lock'}"><div class="row al"><div><b>${c.t}</b><div class="lbl">${open?`${n} of ${c.mods.length} modules passed${n===c.mods.length?' · certificate earned, '+c.feat+' added to your garden':''}`:`Unlocks at the Level ${c.level} milestone`}</div></div><span class="chip ${open?(n===c.mods.length?'ok':''):''}">${open?(n===c.mods.length?'✓ Done':'Open'):'Locked'}</span></div>
+   ${open?bar(n,c.mods.length,c.t+' progress','thin')+c.mods.map(id=>{const M=MODS[id],m=MS(id);return `<div class="mod"><b>${M.t}</b><div class="lbl">10 questions · about ${M.mins} minutes · +${M.v} credits</div><div class="row" style="margin-top:6px">${modChip(id)}<button class="btn sm ${m.passed?'':'pri'}" data-act="lopen" data-id="${id}">${m.quiz?'Continue':m.passed?'Review':m.attempts?'Retake':'Start'}</button></div></div>`}).join(''):`<p class="fine">Includes: ${c.mods.map(id=>MODS[id].t).join(' and ')}.</p>`}</div>`}).join('')}`;
+}
+function tModule(id){
+ const M=MODS[id],m=MS(id),back='<button class="btn ghost sm" data-act="lback">← My learning</button>';
+ if(m.quiz){const q=m.quiz,qi=q.qo[q.i],Q=M.qs[qi],last=q.i===M.qs.length-1;
+  return `${back}<div class="lbl" style="margin-top:6px">${M.t} · question ${q.i+1} of 10</div>${bar(q.i+1,10,'Quiz progress','thin')}
+  <div class="card" style="margin-top:12px"><h4 id="qh" tabindex="-1">${esc(Q.q)}</h4><div role="group" aria-labelledby="qh">${q.oo[q.i].map(j=>`<button class="btn opt" data-act="qpick" data-j="${j}" aria-pressed="${q.ans[q.i]===j}">${esc(Q.o[j])}</button>`).join('')}</div>
+  <div class="two" style="margin-top:14px"><button class="btn" data-act="qprev" ${q.i===0?'disabled':''}>Back</button><button class="btn pri" data-act="${last?'qsubmit':'qnext'}" ${q.ans[q.i]==null?'disabled':''}>${last?'Submit quiz':'Next'}</button></div>
+  <button class="btn ghost sm wide" data-act="lback">Save and finish later</button></div>`}
+ if(S.ui.res===id&&m.last){const L=m.last,ok=L.score>=PASS;
+  const rows=L.qo.map((qi,k)=>({Q:M.qs[qi],a:L.ans[k],k}));
+  return `${back}<div class="card" style="margin-top:8px"><h4 id="resH" tabindex="-1">${M.t}</h4><div class="big">${L.score} / 10</div><div class="chg ${ok?'up':'down'}">${ok?'✓ Passed':'✕ Not passed yet · you need 8 to pass'}</div>
+   <p class="fine">${ok?(m.cred==='waiting'?'Your 3 credits are waiting for Sam to approve.':m.cred==='given'?`${m.got} credits added${m.got<M.v?' (monthly cap reached)':''}.`:''):'Read the key points again, then retake. The questions and answers are shuffled each time.'}</p>
+   <button class="btn ${ok?'':'pri'} wide" data-act="qstart" data-id="${id}">${ok?'Retake for practice (no extra credits)':'Retake quiz'}</button></div>
+   <div class="card"><b>${ok?'Your answers':'Questions to review'}</b><ul class="rev">${ok?rows.map(r=>{const right=r.a===r.Q.a;return `<li><span class="mark ${right?'up':'down'}">${right?'✓':'✕'}</span>${esc(r.Q.q)}<div class="lbl">${right?'Your answer: ':'Correct answer: '}${esc(r.Q.o[r.Q.a])}${right?'':' · your answer: '+esc(r.Q.o[r.a])}</div></li>`}).join('')
+    :rows.filter(r=>r.a!==r.Q.a).map(r=>`<li><span class="mark down">✕</span>${esc(r.Q.q)}</li>`).join('')}</ul></div>`}
+ return `${back}<h3 id="modH" tabindex="-1" style="margin-top:6px">${M.t}</h3><div class="lbl">${M.cat.t} · about ${M.mins} minutes · 10 questions · pass mark 8</div>
+ <div class="card" style="margin-top:12px"><b>Key points</b><ul class="pts">${M.pts.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div>
+ <div class="card"><div class="row">${modChip(id)}</div>${m.last?`<p class="fine">Last attempt: ${m.last.score}/10 in Month ${m.last.at}. ${m.attempts} attempt${m.attempts===1?'':'s'} so far.</p>`:''}
+  <button class="btn pri wide" data-act="qstart" data-id="${id}">${m.passed?'Retake for practice (no extra credits)':m.attempts?'Retake quiz':'Start quiz'}</button>
+  ${m.last?`<button class="btn wide" data-act="qres" data-id="${id}">See last result</button>`:''}</div>`;
+}
+const tLearn=()=>S.ui.mod?tModule(S.ui.mod):tLearnHome();
+function tJourney(){
+ const B=[['task','First task','#3fae5a'],['mod','First module passed','#6c9bb8'],['mile','First milestone','#ffc83d'],['dip','Held through a dip','#4aa3d8',RV()],['six','Six months planted','#2f8f5b'],['cert','First topic certificate','#e46a4f']];
+ return `<h3>My journey</h3>
+ <div class="card"><div class="lbl">Credits added over time</div><div class="big">${Math.round(S.life)} credits</div>
+  <div class="fig" data-chart="t"><svg aria-label="Credits added by month"></svg></div>
+  <div class="legend"><span><span class="k" style="--c:#2f9a4f"></span>Credits added</span>${S.showReal?'<span><span class="k" style="--c:#1f6b4f"></span>Real value (shared by Sam)</span>':''}</div></div>
+ <div class="card"><b>Milestones reached</b>${S.miles.map(m=>`<div class="act row"><span>Level ${m.level} · Month ${m.m}${m.perk?' · perk: '+esc(m.perk):''}</span><b>${S.showReal?money(m.amt):m.total+' credits'}</b></div>`).join('')||'<p class="fine">None yet.</p>'}</div>
+ <div class="card"><b>Badges</b><div class="badges" style="margin-top:10px">${B.map(([k,n,c,x])=>badge(S.badges[k]!=null,n,c,x||'')).join('')}</div></div>
+ ${S.showReal?realCard():'<p class="fine">Sam can choose to show real dollar values here.</p>'}`;
+}
+
+/* ---------- render ---------- */
+function assignIds(){document.querySelectorAll('[data-act]:not([id])').forEach(el=>{const b='a-'+Object.entries(el.dataset).map(([k,v])=>k+'_'+v).join('-').replace(/[^\w-]/g,'');let id=b,i=2;while(document.getElementById(id))id=b+'-'+i++;el.id=id})}
+function render(){
+ const ae=document.activeElement,fid=ae&&ae!==document.body?ae.id:'',side=ae&&ae.closest?(ae.closest('#colP')?'p':ae.closest('#colT')?'t':''):'';
+ let sel=null;try{if(ae&&ae.setSelectionRange&&(ae.type==='text'||ae.type==='search'))sel=[ae.selectionStart,ae.selectionEnd]}catch(e){}
+ const sp=$('#pScr').scrollTop,st=$('#tScr').scrollTop,n=waiting().length;
+ $('#month').textContent='Month '+S.m+' · '+clkTxt();$('#mkt').innerHTML=isOpen()?'● Market open':'○ Market closed';
+ $('#pScr').innerHTML={home:pHome,approve:pApprove,plan:pPlan,invest:pInvest,log:pLog}[S.ui.ptab]();
+ $('#tScr').innerHTML={garden:tGarden,tasks:tTasks,learn:tLearn,journey:tJourney}[S.ui.ttab]();
+ $('#pTabs').innerHTML=tabs('p',[['home','Home'],['approve','Approvals',n||'',n+' waiting'],['plan','Family'],['invest','Invest',S.credits>=Z()?'!':'','milestone reached'],['log','Log']]);
+ $('#tTabs').innerHTML=tabs('t',[['garden','Garden'],['tasks','Tasks'],['learn','Learn'],['journey','Journey']]);
+ $('#pScr').setAttribute('aria-labelledby','p-tab-'+S.ui.ptab);$('#tScr').setAttribute('aria-labelledby','t-tab-'+S.ui.ttab);
+ $('#pSheet').innerHTML=S.ui.confirm?sheet():'';$('#pScr').inert=$('#pTabs').inert=!!S.ui.confirm;
+ $('#colP').classList.toggle('hide-m',S.ui.view!=='parent');$('#colT').classList.toggle('hide-m',S.ui.view!=='teen');
+ $('#vP').setAttribute('aria-pressed',S.ui.view==='parent');$('#vT').setAttribute('aria-pressed',S.ui.view==='teen');
+ $('#bDip').disabled=S.dip;$('#bDip').textContent=S.dip?'Dip used this month':'Market dip';
+ $('#rmin').value=S.rules.min;$('#rtime').value=S.ui.tpre;$('#review').checked=S.ui.review;
+ assignIds();
+ $('#pScr').scrollTop=S.ui.resetScroll==='p'?0:sp;$('#tScr').scrollTop=S.ui.resetScroll==='t'?0:st;S.ui.resetScroll=null;
+ let tg=S.ui.focusSel?document.querySelector(S.ui.focusSel):S.ui.focusAfter?document.getElementById(S.ui.focusAfter):fid?document.getElementById(fid):null;S.ui.focusAfter=S.ui.focusSel=null;
+ if((!tg&&fid)||(tg&&tg.disabled))tg=side==='p'?$('#pScr'):side==='t'?$('#tScr'):$('#bNext');
+ if(tg&&tg!==document.activeElement){tg.focus({preventScroll:true});if(sel&&tg.setSelectionRange)try{tg.setSelectionRange(sel[0],sel[1])}catch(e){}}
+ drawCharts();
+}
+
+/* ---------- actions ---------- */
+const T=id=>S.tasks.find(x=>x.id==id);
+const A={
+ next(){S.ui.gAt=null;const ms=advance();say(`Month ${S.m}: ${ms.length?ms.join(', '):'no new contributions'}. Made-up returns applied.`)},
+ dip,
+ reset(){boot({view:S.ui.view,review:S.ui.review});say('Back to the starting example.')},
+ view(b){S.ui.view=b.dataset.v},
+ approve(b){const t=T(b.dataset.id),g=approveTask(t);say(g<t.v?`Approved, but the monthly cap allowed only ${g} of ${t.v} credits.`:`Approved: +${g} credits for Mia.`)},
+ approveMod(b){approveMod(b.dataset.id);say('Module credits approved.')},
+ notyet(b){S.ui.ny=b.dataset.id;S.ui.focusSel=`[data-act="nyr"][data-id="${b.dataset.id}"]`},
+ nyr(b){notYet(T(b.dataset.id),b.dataset.r);S.ui.ny=null;say('Sent back with a kind reason. Nothing is lost, and Mia can try again.')},
+ give(b){const s=S.shout.find(x=>x.id==b.dataset.id),a=+b.dataset.a;
+  if(a>0){const g=earn(a,'Shout-out');if(g>0){s.st='given';s.amt=g;s.asked=a;audit('Shout-out',g,g<a?'Rewarded (cap cut it)':'Rewarded')}else{s.st='thanks';s.capped=true;audit('Shout-out',0,'Thanks only (cap reached)')}}
+  else{s.st='thanks';audit('Shout-out',0,'Thanks only')}},
+ shoutno(b){S.shout.find(x=>x.id==b.dataset.id).st='notnow';audit('Shout-out',0,'Not this time')},
+ sugOk(b){const s=S.sugg.find(x=>x.id==b.dataset.id);addSug(s,s.t,s.v,false)},
+ sugEdit(b){const s=S.sugg.find(x=>x.id==b.dataset.id);S.ui.editSug=s.id;S.ui.esT=s.t;S.ui.esV=String(s.v);S.ui.focusAfter='esT'},
+ sugCancel(){S.ui.editSug=null},
+ sugSave(b){const s=S.sugg.find(x=>x.id==b.dataset.id),t=(S.ui.esT||'').trim()||s.t,v=Math.max(0,Math.round(+S.ui.esV||0));addSug(s,t,v,true);S.ui.editSug=null},
+ sugNo(b){const s=S.sugg.find(x=>x.id==b.dataset.id);s.st='declined';audit('Task idea: '+s.t,0,'Declined with a kind note');say('Idea declined with a kind note.')},
+ skip(){S.plan.skip=!S.plan.skip},
+ pause(){S.plan.paused=!S.plan.paused},
+
+ addtask(){const t=(S.ui.newT||'').trim(),v=Math.max(0,Math.round(+S.ui.newV||0));if(!t){say('Give the new task a name first.');return}S.tasks.push({id:S.nid++,t,v:v||5,cat:'Custom',rep:true,proof:'none',st:'open',note:'',photo:null,reason:'',got:0,asked:0});S.ui.newT=S.ui.newV='';say('Task added. Mia can see it now.')},
+
+
+
+
+
+
+
+
+
+ editPlan(){S.ui.edit={...S.core};S.ui.pchk=false;S.ui.focusAfter='coreH'},
+ sedit(){S.ui.sedit={...S.plan.split};S.ui.schk=false;S.ui.focusAfter='steadyH'},
+ pstep(b){const E=S.ui[b.dataset.k==='core'?'edit':'sedit'],id=b.dataset.id;E[id]=Math.max(0,Math.min(100,E[id]+ +b.dataset.d))},
+ prm(b){delete S.ui[b.dataset.k==='core'?'edit':'sedit'][b.dataset.id]},
+ padd(b){const k=b.dataset.k,sel=document.getElementById('add-'+k),id=sel&&sel.value;if(!id)return;S.ui[k==='core'?'edit':'sedit'][id]=0;S.ui.focusSel=`[data-act="pstep"][data-k="${k}"][data-id="${id}"][data-d="10"]`},
+ pcancel(b){S.ui[b.dataset.k==='core'?'edit':'sedit']=null},
+ psave(b){const k=b.dataset.k,E=S.ui[k==='core'?'edit':'sedit'];if(!E)return;const ids=Object.keys(E);if(!ids.length||ids.reduce((a,id)=>a+E[id],0)!==100||ids.some(id=>!E[id]))return;
+  if(k==='core'){S.core={...E};S.coreSet=S.m;S.ui.edit=null;audit('Milestone plan changed: '+planTxt(S.core),0,'Changed (future milestones only)');say('Milestone plan saved. It applies from the next milestone.')}
+  else{S.plan.split={...E};S.ui.sedit=null;audit('Steady plan ETFs changed: '+planTxt(S.plan.split),0,'Changed');say('Steady plan saved. The next automatic buy uses this mix.')}},
+ way(b){S.ui.way=b.dataset.v;S.ui.edit=S.ui.sedit=null},
+ gomile(){S.ui.ptab='invest';S.ui.etf=null;S.ui.way='mile';S.ui.resetScroll='p';S.ui.focusAfter='p-tab-invest'},
+ money(b){S.ui.money=S.ui.money===b.dataset.k?null:b.dataset.k;S.ui.mAmt='';S.ui.focusAfter='mAmt'},
+ mq(b){S.ui.mAmt=String(b.dataset.v)},
+ moneyX(){S.ui.money=null},
+ moneyGo(){const a=+S.ui.mAmt||0;if(a<=0)return;if(S.ui.money==='add'){addMoney(a);say(`Added ${money(a)} to the wallet (simulated).`)}else{if(a>S.cash)return;withdraw(a);say(`Withdrew ${money(a)} to Sam's bank (simulated).`)}S.ui.money=null;S.ui.mAmt=''},
+ etf(b){S.ui.from=S.ui.ptab==='home'?'home':'invest';S.ui.ptab='invest';S.ui.etf=b.dataset.id;S.ui.side='buy';S.ui.buyAmt='';S.ui.sellAmt='';S.ui.ochk=false;S.ui.money=null;S.ui.resetScroll='p';S.ui.focusAfter='etfH'},
+ etfback(){const id=S.ui.etf;S.ui.etf=null;S.ui.money=null;S.ui.resetScroll='p';if(S.ui.from==='home'){S.ui.ptab='home';S.ui.focusAfter='p-tab-home'}else S.ui.focusSel=`[data-act="etf"][data-id="${id}"]`},
+ range(b){S.ui.range=b.dataset.v==='all'?'all':12},
+ side(b){S.ui.side=b.dataset.v},
+ amt(b){S.ui[S.ui.side==='sell'&&U(S.ui.etf)>0?'sellAmt':'buyAmt']=String(b.dataset.v)},
+ buy(b){const o=buyNow(b.dataset.id,+S.ui.buyAmt);if(!o)return;S.ui.buyAmt='';S.ui.ochk=false;say(o.st==='done'?`Bought ${money(o.amt)} of ${b.dataset.id} at ${money(S.price[b.dataset.id])} a unit (simulated).`:`Order placed: ${money(o.amt)} of ${b.dataset.id} is bought when the ASX opens (${opensTxt()}).`)},
+ sell(b){const o=sellNow(b.dataset.id,+S.ui.sellAmt);if(!o)return;S.ui.sellAmt='';S.ui.ochk=false;say(o.st==='done'?`Sold ${b.dataset.id}: ${money(o.amt)} is back in the wallet (simulated).`:`Sell order placed: it is sold when the ASX opens (${opensTxt()}).`)},
+ ocancel(b){const o=S.orders.find(x=>x.id==b.dataset.id);cancelQueued(o);S.ui.focusAfter='pScr';say('Order cancelled. Nothing was bought or sold.')},
+ addSteady(b){const id=b.dataset.id;S.ui.etf=null;S.ui.way='steady';S.ui.sedit={...S.plan.split,[id]:0};S.ui.schk=false;S.ui.resetScroll='p';S.ui.focusAfter='steadyH';say(`${id} added to the steady plan you're editing. Set its share and save.`)},
+ qcat(b){S.ui.qcat=b.dataset.c},
+ skipopen(){const n=openMarket();S.ui.tpre='open';say(`Skipped to market open (${clkTxt()}). ${n} waiting order${n===1?'':'s'} filled.`)},
+ gnow(){S.ui.gAt=null;S.ui.focusAfter='gAt'},
+ approveInvest(){S.ui.confirm=true;S.ui.focusAfter='sh-back'},
+ cancel(){S.ui.confirm=false;S.ui.focusAfter='p-approve-invest'},
+ confirm(){const o=invest();S.ui.confirm=false;S.ui.und=false;if(!o)return;S.ui.focusAfter='pScr';say(o.st==='done'?`Approved: ${money(o.amt)} from the wallet, bought for Mia's milestone.`:`Approved: ${money(o.amt)} is bought for Mia's milestone when the ASX opens.`)},
+ goinvest(){S.ui.ptab='invest';S.ui.etf=null;S.ui.resetScroll='p';S.ui.focusAfter='p-tab-invest'},
+ goapp(){S.ui.ptab='approve';S.ui.resetScroll='p';S.ui.focusAfter='p-tab-approve'},
+ goplan(){S.ui.ptab='plan';S.ui.resetScroll='p';S.ui.focusAfter='p-tab-plan'},
+ done(b){const t=T(b.dataset.id);S.ui.photo=null;S.ui.note='';if(t.proof==='none'){t.st='submitted';say('Sent to Sam for approval.');return}S.ui.doing=t.id;S.ui.focusAfter=t.proof==='note'?'noteTxt':null},
+ photo(b){S.ui.photo=b.dataset.k},
+ cancelDo(){S.ui.doing=null},
+ send(b){const t=T(b.dataset.id),note=(S.ui.note||'').trim();if(t.proof==='note'&&!note){say('Add a short note for Sam first.');S.ui.focusAfter='noteTxt';return}
+  t.st='submitted';t.note=note;t.photo=t.proof==='photo'?S.ui.photo:null;S.ui.doing=null;say('Mia sent a task to Sam for approval.')},
+ retry(b){const t=T(b.dataset.id);t.st='open';t.reason='';t.note='';t.photo=null;S.ui.focusAfter='a-act_done-id_'+t.id;say('Task is open again. No credits were lost.')},
+ lopen(b){S.ui.mod=b.dataset.id;S.ui.res=null;S.ui.resetScroll='t';S.ui.focusAfter=MS(b.dataset.id).quiz?'qh':'modH'},
+ lback(){const id=S.ui.mod;S.ui.mod=null;S.ui.res=null;S.ui.resetScroll='t';S.ui.focusAfter='a-act_lopen-id_'+id},
+ qstart(b){startQuiz(b.dataset.id);S.ui.mod=b.dataset.id;S.ui.res=null;S.ui.resetScroll='t';S.ui.focusAfter='qh'},
+ qres(b){S.ui.res=b.dataset.id;S.ui.resetScroll='t';S.ui.focusAfter='resH'},
+ qpick(b){const q=MS(S.ui.mod).quiz;q.ans[q.i]=+b.dataset.j},
+ qnext(){const q=MS(S.ui.mod).quiz;if(q.ans[q.i]==null)return;q.i++;S.ui.focusAfter='qh'},
+ qprev(){const q=MS(S.ui.mod).quiz;if(q.i>0)q.i--;S.ui.focusAfter='qh'},
+ qsubmit(){const id=S.ui.mod,m=MS(id),was=m.passed,sc=grade(id);S.ui.res=id;S.ui.resetScroll='t';S.ui.focusAfter='resH';
+  say(sc>=PASS?(was?`Passed again with ${sc}/10. No extra credits for a retake.`:S.autoMod?`Passed with ${sc}/10! Credits added.`:`Passed with ${sc}/10! Credits sent to Sam to approve.`):`${sc}/10. You need 8 to pass. Review and retake.`)},
+ shoutSend(){const t=(S.ui.shout||'').trim();if(!t){say('Write a few words first.');return}if(S.shoutUsed>=S.shoutLimit)return;S.shout.unshift({id:S.nid++,text:t,st:'submitted'});S.shoutUsed++;S.ui.shout='';say('Mia sent a shout-out to Sam.')},
+ sugSend(){const t=(S.ui.sugT||'').trim(),v=Math.max(0,Math.round(+S.ui.sugV||0));if(!t){say('Give the task idea a name first.');return}S.sugg.unshift({id:S.nid++,t,v:v||5,st:'submitted'});S.ui.sugT=S.ui.sugV='';say('Mia sent a task idea to Sam.')}
+};
+function addSug(s,t,v,edited){S.tasks.push({id:S.nid++,t,v,cat:"Mia's idea",rep:false,proof:'note',due:S.m+1,st:'open',note:'',photo:null,reason:'',got:0,asked:0});s.st='accepted';s.final={t,v};audit('Task idea: '+t,0,edited?'Accepted with edits':'Accepted');say(`Task added for Mia: ${t}, ${v} credits.`)}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+ const tb=e.target.closest('[data-tab]');
+ if(tb){const [w,t]=tb.dataset.tab.split(':');S.ui[w+'tab']=t;S.ui.resetScroll=w;S.ui.doing=null;S.ui.gAt=null;if(w==='p'&&t==='invest')S.ui.etf=null;render();return}
+ const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+ const f=A[b.dataset.act];if(!f)return;f(b);render();
+});
+document.addEventListener('change',e=>{
+ const el=e.target.closest('[data-set]');if(!el)return;
+ const k=el.dataset.set,v=el.type==='checkbox'?el.checked:el.value,clamp=x=>Math.max(50,Math.min(500,Math.round((+x||50)/10)*10));
+
+
+ if(k==='perk')S.perk=String(v).trim().slice(0,40);
+ else if(k==='planOn')S.plan.on=v;
+ else if(k==='planAmt')S.plan.amt=Math.max(0,+v||0);
+ else if(k==='planFreq')S.plan.freq=v;
+ else if(k==='cap')S.cap=Math.max(0,+v||0);
+ else if(k==='autoMod'){S.autoMod=v;say(v?'Module credits are added as soon as Mia passes.':'Sam approves module credits.')}
+ else if(k==='showReal'){S.showReal=v;say(v?'Mia can now see real dollar values.':'Real dollar values are hidden from Mia again.')}
+ else if(k==='tv')T(el.dataset.id).v=Math.max(0,Math.round(+v||0));
+ else if(k==='tp')T(el.dataset.id).proof=v;
+ else if(k==='und')S.ui.und=v;
+ else if(k==='pchk')S.ui.pchk=v;
+ else if(k==='schk')S.ui.schk=v;
+ else if(k==='ochk')S.ui.ochk=v;
+ else if(k==='rmin'){S.rules.min=+v;say(`Partner rule: minimum order ${whole(+v)} for each ETF line.`)}
+ else if(k==='rtime'){S.ui.tpre=v;S.clk=PRESET[v];const n=isOpen()?queued().length:0;if(n)queued().forEach(execute);say(isOpen()?`Simulated time: ${clkTxt()}, market open.${n?` ${n} waiting order${n===1?'':'s'} filled.`:''}`:`Simulated time: ${clkTxt()}, market closed. It opens ${opensTxt()}.`)}
+ else if(k==='planAuto'){S.plan.auto=Math.max(100,Math.round(+v||100));steadyCheck(null);say(`The steady plan auto-invests once ${whole(S.plan.auto)} has built up.`)}
+ else if(k==='msize'){S.ladder.target=Math.max(100,Math.min(1000,Math.round((+v||100)/10)*10));say(`Each milestone is now ${whole(S.ladder.target)}: ${S.ladder.target} credits, and ${whole(S.ladder.target)} invested.`)}
+ else if(k==='grow')S.ui.grow=+v;
+
+ else if(k==='qsort')S.ui.qsort=v;
+
+ else if(k==='review')S.ui.review=v;
+ render();
+});
+document.addEventListener('input',e=>{const id=e.target.id,v=e.target.value,m={shoutTxt:'shout',noteTxt:'note',newT:'newT',newV:'newV',sugT:'sugT',sugV:'sugV',esT:'esT',esV:'esV'};if(m[id])S.ui[m[id]]=v;
+ if(id==='q'){S.ui.q=v;render()}
+ if(id==='buyAmt'||id==='sellAmt'||id==='mAmt'){S.ui[id]=v.replace(/[^0-9.]/g,'');render()}
+ if(id.startsWith('add-'))S.ui['add'+id.slice(4)]=v;
+ if(id==='gAt'){const at=+v;S.ui.gAt=at>=S.m?null:at;$('#gardenBox').innerHTML=garden(at);$('#gCmp').innerHTML=cmpText(at);$('#gAtL').textContent=at<S.m?'Month '+at:'Now (Month '+S.m+')';e.target.setAttribute('aria-valuetext',at<S.m?'Month '+at:'Now')}
+ if(id==='grow'){S.ui.grow=+v;const l=e.target.previousElementSibling;if(l)l.querySelector('b').textContent='$'+v;drawCharts()}});
+document.addEventListener('keydown',e=>{
+ if(S.ui.confirm){
+  if(e.key==='Escape'){e.preventDefault();A.cancel();render();return}
+  if(e.key==='Tab'){const f=[...document.querySelectorAll('.sheet button:not([disabled])')],i=f.indexOf(document.activeElement);
+   if(i<0||(e.shiftKey&&i===0)||(!e.shiftKey&&i===f.length-1)){e.preventDefault();f[i<0||!e.shiftKey?0:f.length-1].focus()}}
+ }
+ const t=e.target.closest&&e.target.closest('[role=tab]');if(!t)return;
+ const list=[...t.parentElement.querySelectorAll('[role=tab]')],i=list.indexOf(t);let j=null;
+ if(e.key==='ArrowRight')j=(i+1)%list.length;else if(e.key==='ArrowLeft')j=(i-1+list.length)%list.length;else if(e.key==='Home')j=0;else if(e.key==='End')j=list.length-1;
+ if(j==null)return;e.preventDefault();const [w,tab]=list[j].dataset.tab.split(':');S.ui[w+'tab']=tab;S.ui.resetScroll=w;S.ui.focusAfter=list[j].id;render();
+});
+const ro=new ResizeObserver(()=>drawCharts());ro.observe(document.body);
+if(typeof window!=='undefined'&&window.setInterval)window.setInterval(()=>{if(!S||S.ui.confirm)return;const was=isOpen();S.clk+=1/60;
+ if(isOpen()!==was){if(isOpen()){const n=queued().length;queued().forEach(execute);if(n)say(`The ASX opened. ${n} waiting order${n===1?'':'s'} filled.`)}render();return}
+ document.querySelectorAll('.cd').forEach(e=>e.textContent=countdown());$('#month').textContent='Month '+S.m+' · '+clkTxt()},1000);
+boot();render();
+}
+</script>
+</body>
+</html>
