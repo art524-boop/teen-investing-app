@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Layout } from '../../components/Layout'
 import { ParentTabs } from '../../components/Tabs'
 import { Avatar, Spinner } from '../../components/ui'
@@ -17,6 +17,7 @@ type Item =
 
 export default function Approvals() {
   const { loading, error, teens, tasks, submissions, shoutouts, ideas, reload } = useFamily()
+  useEffect(() => { void reload() }, [reload]) // fresh data whenever this tab opens
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   const items: Item[] = [

@@ -8,6 +8,7 @@ import { PROOF_LABEL, fmtDue, latestSubmission, useFamily, type Task } from '../
 
 export default function TeenTasks() {
   const { loading, error, tasks, submissions, ideas, shoutouts, parentName, reload, markDecisionsSeen, newDecisions } = useFamily()
+  useEffect(() => { void reload() }, [reload]) // fresh data whenever this tab opens
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
   // Opening Tasks clears the "new decisions" badge.

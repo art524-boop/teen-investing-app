@@ -4,10 +4,12 @@ import { Layout } from '../../components/Layout'
 import { AvatarPicker, Field } from '../../components/ui'
 import { InviteCard, type Invite } from './InviteCard'
 import { callFn, errorText } from '../../lib/api'
+import { useFamily } from '../../lib/familyData'
 
 const AGES = [13, 14, 15, 16, 17]
 
 export default function AddTeen() {
+  const { reload } = useFamily()
   const [nickname, setNickname] = useState('')
   const [age, setAge] = useState<number | null>(null)
   const [avatar, setAvatar] = useState('')
@@ -29,6 +31,7 @@ export default function AddTeen() {
         nickname: nickname.trim(), age_band: age, avatar, consent: true,
       })
       setResult({ nickname: r.teen.nickname, invite: r.invite })
+      void reload()
     } catch (err) {
       setError(errorText(err))
     } finally {

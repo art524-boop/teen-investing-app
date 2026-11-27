@@ -36,6 +36,7 @@ const toRow = (d: Draft) => ({
 /** Family settings → Tasks: add, edit and archive tasks for each teen. */
 export default function FamilySettings() {
   const { loading, error, teens, tasks, reload } = useFamily()
+  useEffect(() => { void reload() }, [reload]) // fresh data whenever this tab opens
   const [teenId, setTeenId] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
