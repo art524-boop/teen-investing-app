@@ -171,7 +171,7 @@ try {
   for (const [i, text] of ['Helped Mrs Lee carry her shopping', 'Walked the neighbour\'s dog', 'Fixed my brother\'s bike'].entries()) {
     await t.getByLabel(/Did something good/).fill(`${text} ${stamp}`)
     await t.getByRole('button', { name: 'Send shout-out' }).click()
-    await t.getByText(`Shout-out sent to Sam.`).waitFor()
+    await t.locator('.quote', { hasText: `${text} ${stamp}` }).waitFor() // sent and listed before typing the next
     if (i === 0) await synced(p.getByText(`“${text} ${stamp}”`), '6a. shout-out appears for the parent')
   }
   check(await seen(p.getByText(`“Fixed my brother's bike ${stamp}”`)), 'no shout-out limit: three in a row all arrive')
