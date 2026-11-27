@@ -1,11 +1,13 @@
-# Stage 1 end-to-end tests
+# End-to-end tests
 
-Three layers of tests, all against the real Supabase project:
+All tests run against the real Supabase project:
 
 | Test | What it covers | How to run |
 | --- | --- | --- |
 | `supabase/tests/rls_stage1.sql` | 54 row-level-security checks: family A can't see family B, teens can't read each other or write anything, audit log is append-only (but goes with its family on delete-data), PIN lock and join rate-limit helpers | Paste into the Supabase SQL editor. It rolls itself back. Every row should say PASS. |
 | `tests/e2e/stage1-api.mjs` | 48 checks through the real Edge Functions: two-step verification, add teen, join, log in, 5-wrong-PIN lock, PIN reset, new invite, audit log, join rate limit | `NODE_USE_ENV_PROXY=1 node --env-file=.env tests/e2e/stage1-api.mjs` (the proxy variable is only needed behind a proxy) |
+| `supabase/tests/rls_stage2.sql` | 54 Stage 2 checks: family B can't see family A's tasks, a teen can't approve their own work or write the ledger, approve pays once, "Not yet" costs nothing, weekly reopen, ideas, shout-outs, no cap, every decision audited | Paste into the Supabase SQL editor (rolls itself back). |
+| `tests/e2e/stage2-ui.mjs` | Two phones: every change must appear on the other phone within 5 seconds without refreshing (task created, submission, approval, Not yet, ideas, shout-outs, archive); prints sync times | `npm run build && npm run preview`, then `node tests/e2e/stage2-ui.mjs` (needs a fresh `E2E_PARENT_C`) |
 | `tests/e2e/stage1-ui.mjs` | 22 checks with two emulated phones (iPhone 13 + Pixel 7) walking the whole Stage 1 loop in the browser, plus PWA manifest and service worker | `npm run build && npm run preview`, then `node tests/e2e/stage1-ui.mjs` |
 
 ## Test accounts
