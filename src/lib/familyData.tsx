@@ -97,6 +97,7 @@ export const PROOF_LABEL: Record<Proof, string> = { none: 'No proof', note: 'Not
 export function FamilyDataProvider({ children }: { children: ReactNode }) {
   const { session, role, familyId } = useAuth()
   const userId = session?.user.id ?? ''
+  const token = session?.access_token ?? ''
   const [state, setState] = useState<Omit<FamilyData, 'reload' | 'markDecisionsSeen' | 'pendingCount' | 'newDecisions'>>({
     loading: true, error: '', familyName: '', parentName: '', teens: [], tasks: [], submissions: [],
     ideas: [], shoutouts: [], ledger: [], balances: {},
@@ -142,8 +143,12 @@ export function FamilyDataProvider({ children }: { children: ReactNode }) {
   // Live sync: any change to the family's rows triggers a (debounced) reload.
   const timer = useRef<number | undefined>(undefined)
   useEffect(() => {
-    if (!familyId || !role) return
+    if (!familyId || !role || !token) return
     load()
+    // Realtime keeps the token it had at sign-in. A parent's data needs the token from
+    // AFTER the authenticator code (aal2), so hand the current one over explicitly;
+    // this effect re-runs whenever the token changes (two-step, hourly refresh).
+    supabase.realtime.setAuth(token)
     const schedule = () => {
       window.clearTimeout(timer.current)
       timer.current = window.setTimeout(load, 150)
@@ -165,7 +170,7 @@ export function FamilyDataProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('online', schedule)
       supabase.removeChannel(channel)
     }
-  }, [familyId, role, userId, load])
+  }, [familyId, role, userId, token, load])
 
   const pendingCount = useMemo(() => role !== 'parent' ? 0 :
     state.submissions.filter((s) => s.decision === 'pending').length

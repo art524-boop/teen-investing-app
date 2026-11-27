@@ -88,14 +88,14 @@ try {
   check(true, 'set-up: parent signed in with authenticator, Mia joined on the second phone')
 
   // ---------------- seeded tasks
-  await t.getByRole('link', { name: 'Tasks', exact: true }).click()
+  await t.getByRole('link', { name: /^Tasks/ }).click()
   check(await seen(t.getByText('Wash the car')) && await seen(t.getByText('Compare prices for new headphones')),
     'Mia sees the example tasks from v6')
   await shot(t, 'teen-01-tasks')
   await t.waitForTimeout(1500) // let the live connection settle
 
   // ---------------- 1. parent creates a task -> teen phone
-  await p.getByRole('link', { name: 'Family', exact: true }).click()
+  await p.getByRole('link', { name: /^Family/ }).click()
   await p.getByRole('button', { name: 'Add a task' }).click()
   await p.getByLabel('Task', { exact: true }).fill(`Feed the cat ${stamp}`)
   await p.getByLabel('Credits', { exact: true }).fill('7')
@@ -117,7 +117,7 @@ try {
   await shot(p, 'parent-02-approvals')
 
   // ---------------- 3. approve (double-tap) -> teen balance
-  await t.getByRole('link', { name: 'Credits', exact: true }).click()
+  await t.getByRole('link', { name: /^Credits/ }).click()
   await t.getByText('Credits earned').waitFor()
   await t.waitForTimeout(1000)
   const approve = p.locator('.card', { hasText: `Feed the cat ${stamp}` }).getByRole('button', { name: 'Approve' })
@@ -129,7 +129,7 @@ try {
   await shot(t, 'teen-02-credits')
 
   // ---------------- 4. Not yet -> reason, nothing lost, try again
-  await t.getByRole('link', { name: 'Tasks', exact: true }).click()
+  await t.getByRole('link', { name: /^Tasks/ }).click()
   await t.locator('.card', { hasText: 'Wash the car' }).getByRole('button', { name: 'Mark as done' }).click()
   await t.locator('.card', { hasText: 'Wash the car' }).getByRole('button', { name: 'Send to Sam' }).click()
   const wash = p.locator('.card', { hasText: 'Wash the car' })
@@ -142,11 +142,11 @@ try {
   await washT.getByRole('button', { name: 'Try again' }).click()
   await washT.getByRole('button', { name: 'Send to Sam' }).click()
   check(await seen(t.locator('.card', { hasText: 'Wash the car' }).getByText('Waiting for Sam')), 'teen can try again after "Not yet"')
-  await t.getByRole('link', { name: 'Credits', exact: true }).click()
+  await t.getByRole('link', { name: /^Credits/ }).click()
   check((await t.locator('.big').textContent()).trim() === '7', '"Not yet" cost nothing (balance still 7)')
 
   // ---------------- 5. task ideas
-  await t.getByRole('link', { name: 'Tasks', exact: true }).click()
+  await t.getByRole('link', { name: /^Tasks/ }).click()
   await t.getByLabel(/Got an idea for a task/).fill(`Sort the garage ${stamp}`)
   await t.getByLabel("Credits you'd suggest").fill('20')
   await t.getByRole('button', { name: 'Send idea' }).click()
@@ -187,17 +187,17 @@ try {
   await synced(t.getByText('Sam added 40 credits'), '6d. any amount (no cap): 40 credits')
 
   // ---------------- 7. balances everywhere
-  await t.getByRole('link', { name: 'Credits', exact: true }).click()
+  await t.getByRole('link', { name: /^Credits/ }).click()
   check(await seen(t.locator('.big', { hasText: /^52$/ })), 'teen balance is 7 + 5 + 40 = 52')
-  await p.getByRole('link', { name: 'Home', exact: true }).click()
+  await p.getByRole('link', { name: /^Home/ }).click()
   check(await seen(p.locator('.big', { hasText: /^52$/ })), 'parent Home shows Mia\'s 52 credits')
   check(await seen(p.getByText('1 waiting for you')), 'parent Home shows the waiting count (the retried car wash)')
   await shot(p, 'parent-03-home')
-  await t.getByRole('link', { name: 'Tasks', exact: true }).click()
+  await t.getByRole('link', { name: /^Tasks/ }).click()
   await shot(t, 'teen-04-tasks-after')
 
   // ---------------- 8. archive
-  await p.getByRole('link', { name: 'Family', exact: true }).click()
+  await p.getByRole('link', { name: /^Family/ }).click()
   await p.getByRole('button', { name: 'Edit Mow the lawn' }).click()
   await p.getByRole('button', { name: 'Archive this task' }).click()
   const t0 = Date.now()
