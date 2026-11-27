@@ -140,6 +140,7 @@ try {
   await synced(washT.getByText("Sam: Let's chat about it"), '4b. "Not yet" reason appears on teen phone')
   await shot(t, 'teen-03-not-yet')
   await washT.getByRole('button', { name: 'Try again' }).click()
+  await washT.getByRole('button', { name: 'Mark as done' }).click() // v6: "Try again" reopens the task
   await washT.getByRole('button', { name: 'Send to Sam' }).click()
   check(await seen(t.locator('.card', { hasText: 'Wash the car' }).getByText('Waiting for Sam')), 'teen can try again after "Not yet"')
   await t.getByRole('link', { name: /^Credits/ }).click()
