@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
+import { FamilyDataProvider } from './lib/familyData'
 import { configured } from './lib/supabase'
 import { Layout } from './components/Layout'
 import { Spinner } from './components/ui'
@@ -15,6 +16,10 @@ import Account from './pages/parent/Account'
 import TeenJoin from './pages/teen/Join'
 import TeenLogin from './pages/teen/Login'
 import Garden from './pages/teen/Garden'
+import TeenTasks from './pages/teen/Tasks'
+import TeenCredits from './pages/teen/Credits'
+import Approvals from './pages/parent/Approvals'
+import FamilySettings from './pages/parent/FamilySettings'
 
 /** Parent pages need a parent login AND the authenticator code for this session. */
 function RequireParent({ children }: { children: ReactNode }) {
@@ -30,6 +35,14 @@ function RequireTeen({ children }: { children: ReactNode }) {
   if (loading) return <Spinner />
   if (!session || role !== 'teen') return <Navigate to="/teen/login" replace />
   return <>{children}</>
+}
+
+/** Signed-in areas share one live copy of the family's data. */
+function ParentArea() {
+  return <RequireParent><FamilyDataProvider><Outlet /></FamilyDataProvider></RequireParent>
+}
+function TeenArea() {
+  return <RequireTeen><FamilyDataProvider><Outlet /></FamilyDataProvider></RequireTeen>
 }
 
 function NotConfigured() {
@@ -52,12 +65,20 @@ export default function App() {
           <Route path="/parent/signup" element={<ParentSignUp />} />
           <Route path="/parent/login" element={<ParentLogin />} />
           <Route path="/parent/two-step" element={<ParentTwoStep />} />
-          <Route path="/parent" element={<RequireParent><ParentHome /></RequireParent>} />
-          <Route path="/parent/add-teen" element={<RequireParent><AddTeen /></RequireParent>} />
-          <Route path="/parent/account" element={<RequireParent><Account /></RequireParent>} />
+          <Route element={<ParentArea />}>
+            <Route path="/parent" element={<ParentHome />} />
+            <Route path="/parent/approvals" element={<Approvals />} />
+            <Route path="/parent/family" element={<FamilySettings />} />
+            <Route path="/parent/add-teen" element={<AddTeen />} />
+            <Route path="/parent/account" element={<Account />} />
+          </Route>
           <Route path="/teen/join" element={<TeenJoin />} />
           <Route path="/teen/login" element={<TeenLogin />} />
-          <Route path="/teen" element={<RequireTeen><Garden /></RequireTeen>} />
+          <Route element={<TeenArea />}>
+            <Route path="/teen" element={<Garden />} />
+            <Route path="/teen/tasks" element={<TeenTasks />} />
+            <Route path="/teen/credits" element={<TeenCredits />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
